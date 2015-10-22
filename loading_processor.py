@@ -18,9 +18,9 @@ def load_data():
     # LOAD DATA #
     #############
     print '... loading data'
-    files = ['100', '101', '103', '119']
+    #files = ['100', '101', '103', '119']
     #files = ['100', '119']
-    #files = ['15s']
+    files = ['15s']
 
     train_set = [[], []]
     valid_set = [[], []]

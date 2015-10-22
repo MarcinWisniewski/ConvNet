@@ -31,10 +31,11 @@ from logistic_sgd import LogisticRegression
 from loading_processor import load_data
 from mlp import HiddenLayer
 from conv_layer import LeNetConvPoolLayer
+from conv_network import CNN
 import matplotlib.pyplot as plt
 
 def evaluate_lenet5(learning_rate=0.1, n_epochs=10,
-                    nkerns=[10, 20, 30], batch_size=5000):
+                    nkerns=[10, 20, 30], batch_size=1):
     """ Demonstrates lenet on MNIST dataset
 
     :type learning_rate: float
@@ -82,91 +83,14 @@ def evaluate_lenet5(learning_rate=0.1, n_epochs=10,
     # BUILD ACTUAL MODEL #
     ######################
     print '... building the model'
-
-    # Reshape matrix of rasterized images of shape (batch_size, 28 * 28)
-    # to a 4D tensor, compatible with our LeNetConvPoolLayer
-    # (28, 28) is the size of MNIST images.
-    input_signal_length = 1024
-    layer0_input = x.reshape((batch_size, 1, 1, input_signal_length))
-
-    # Construct the first convolutional pooling layer:
-    # filtering reduces the image size to (28-5+1 , 28-5+1) = (24, 24)
-    # maxpooling reduces this further to (24/2, 24/2) = (12, 12)
-    # 4D output tensor is thus of shape (batch_size, nkerns[0], 12, 12)
-
-    layer0_pooling_factor = 2
-    layer0_filter_length = 71
-    print 'layer 0 input: ', input_signal_length
-    layer0 = LeNetConvPoolLayer(
-        rng,
-        input=layer0_input,
-        image_shape=(batch_size, 1, 1, input_signal_length),
-        filter_shape=(nkerns[0], 1, 1, layer0_filter_length),
-        poolsize=(1, layer0_pooling_factor)
-    )
-
-    # Construct the second convolutional pooling layer
-    # filtering reduces the image size to (12-5+1, 12-5+1) = (8, 8)
-    # maxpooling reduces this further to (8/2, 8/2) = (4, 4)
-    # 4D output tensor is thus of shape (batch_size, nkerns[1], 4, 4)
-    layer1_pooling_factor = 2
-    layer1_filter_length = 36
-    layer1_input_length = (input_signal_length-layer0_filter_length+1)/layer0_pooling_factor
-    print 'layer 1 input: ', layer1_input_length
-    layer1 = LeNetConvPoolLayer(
-        rng,
-        input=layer0.output,
-        image_shape=(batch_size, nkerns[0], 1, layer1_input_length),
-        filter_shape=(nkerns[1], nkerns[0], 1, layer1_filter_length),
-        poolsize=(1, layer1_pooling_factor)
-    )
-
-    layer2_pooling_factor = 2
-    layer2_filter_length = 35
-    layer2_input_length = (layer1_input_length - layer1_filter_length + 1) / layer1_pooling_factor
-    print 'layer 2 input: ', layer2_input_length
-    layer2 = LeNetConvPoolLayer(
-        rng,
-        input=layer1.output,
-        image_shape=(batch_size, nkerns[1], 1, layer2_input_length),
-        filter_shape=(nkerns[2], nkerns[1], 1, layer2_filter_length),
-        poolsize=(1, layer2_pooling_factor)
-    )
-
-
-    # the HiddenLayer being fully-connected, it operates on 2D matrices of
-    # shape (batch_size, num_pixels) (i.e matrix of rasterized images).
-    # This will generate a matrix of shape (batch_size, nkerns[1] * 4 * 4),
-    # or (500, 50 * 4 * 4) = (500, 800) with the default values.
-    layer3_input = layer2.output.flatten(2)
-    #layer3_input_length = layer2_input_length / layer2_pooling_factor
-    layer3_input_length = 93
-    print 'layer 2 output', layer3_input_length
-    print 'layer 3 input: ', nkerns[2] * 1 * layer3_input_length
-    print 'layer 3 output: ', layer3_input_length / 2
-    # construct a fully-connected sigmoidal layer
-    layer3 = HiddenLayer(
-        rng,
-        input=layer3_input,
-        n_in=nkerns[2] * 1 * layer3_input_length,
-        n_out=layer3_input_length / 2,
-        activation=T.tanh
-    )
-
-    # classify the values of the fully-connected sigmoidal layer
-    layer3_input_length = layer3_input_length / 2
-    print 'layer 4 input: ', layer3_input_length
-    layer4 = LogisticRegression(input=layer3.output,
-                                n_in=layer3_input_length,
-                                n_out=6)
-
+    cnn = CNN(rng, x, nkerns, batch_size)
     # the cost we minimize during training is the NLL of the model
-    cost = layer4.negative_log_likelihood(y)
+    cost = cnn.layer4.negative_log_likelihood(y)
 
     # create a function to compute the mistakes that are made by the model
     test_model = theano.function(
         [index],
-        layer4.errors(y),
+        cnn.errors(y),
         givens={
             x: test_set_x[index * batch_size: (index + 1) * batch_size],
             y: test_set_y[index * batch_size: (index + 1) * batch_size]
@@ -175,18 +99,15 @@ def evaluate_lenet5(learning_rate=0.1, n_epochs=10,
 
     validate_model = theano.function(
         [index],
-        layer4.errors(y),
+        cnn.errors(y),
         givens={
             x: valid_set_x[index * batch_size: (index + 1) * batch_size],
             y: valid_set_y[index * batch_size: (index + 1) * batch_size]
         }
     )
 
-    # create a list of all model parameters to be fit by gradient descent
-    params = layer4.params + layer3.params + layer2.params + layer1.params + layer0.params
-
     # create a list of gradients for all model parameters
-    grads = T.grad(cost, params)
+    grads = T.grad(cost, cnn.params)
 
     # train_model is a function that updates the model parameters by
     # SGD Since this model has many parameters, it would be tedious to
@@ -195,7 +116,7 @@ def evaluate_lenet5(learning_rate=0.1, n_epochs=10,
     # (params[i], grads[i]) pairs.
     updates = [
         (param_i, param_i - learning_rate * grad_i)
-        for param_i, grad_i in zip(params, grads)
+        for param_i, grad_i in zip(cnn.params, grads)
     ]
 
     train_model = theano.function(
@@ -212,7 +133,7 @@ def evaluate_lenet5(learning_rate=0.1, n_epochs=10,
     input = T.tensor4('input')
     predict = theano.function(
         [index],
-        layer4.output(),
+        cnn.layer4.output(),
         givens={x: train_set_x[index:],
                 y: test_labels},
         on_unused_input='warn'
@@ -291,47 +212,47 @@ def evaluate_lenet5(learning_rate=0.1, n_epochs=10,
                 done_looping = True
                 break
     end_time = timeit.default_timer()
-    plt.figure(1)
-    for i in range(nkerns[0]):
-        W = layer0.W.container.storage[0][i][0][0]
-        H = numpy.fft.fft(W, 1024)
-        plt.subplot(nkerns[0], 1, i+1)
-        plt.plot(20*numpy.log10(numpy.abs(H[0:512])))
+    #plt.figure(1)
+    #for i in range(nkerns[0]):
+    #    W = layer0.W.container.storage[0][i][0][0]
+    #    H = numpy.fft.fft(W, 1024)
+    #    plt.subplot(nkerns[0], 1, i+1)
+    #    plt.plot(20*numpy.log10(numpy.abs(H[0:512])))
+    #
+    #plt.figure(2)
+    #for i in range(nkerns[1]):
+    #    W = layer1.W.container.storage[0][i][0][0]
+    #    H = numpy.fft.fft(W, 1024)
+    #    plt.subplot(nkerns[1], 1, i+1)
+    #    plt.plot(20*numpy.log10(numpy.abs(H[0:512])))
+    #plt.show()
 
-    plt.figure(2)
-    for i in range(nkerns[1]):
-        W = layer1.W.container.storage[0][i][0][0]
-        H = numpy.fft.fft(W, 1024)
-        plt.subplot(nkerns[1], 1, i+1)
-        plt.plot(20*numpy.log10(numpy.abs(H[0:512])))
-    plt.show()
-
-    RET = []
-    train_set_x = train_set_x.get_value
-    for it in range(len(train_set_x)):
-        test_data = train_set_x[it]
-        N = len(test_data)
-        test_data = theano.shared(numpy.asarray(test_data, dtype=theano.config.floatX))
-        # just zeroes
-        test_labels = T.cast(theano.shared(numpy.asarray(numpy.zeros(batch_size), dtype=theano.config.floatX)), 'int32')
-
-        ppm = theano.function([index], layer4.pred_probs(),
-            givens={
-                x: test_data[index * batch_size: (index + 1) * batch_size],
-                y: test_labels
-            }, on_unused_input='warn')
-
-        # p : predictions, we need to take argmax, p is 3-dim: (# loop iterations x batch_size x 2)
-        p = [ppm(ii) for ii in range( N // batch_size)]
-        #p_one = sum(p, [])
-        #print p
-        p = numpy.array(p).reshape((N, 10))
-        print (p)
-        p = numpy.argmax(p, axis=1)
-        p = p.astype(int)
-        RET.append(p)
-    print RET
-
+    #RET = []
+    #train_set_x = train_set_x.get_value
+    #for it in range(len(train_set_x)):
+    #    test_data = train_set_x[it]
+    #    N = len(test_data)
+    #    test_data = theano.shared(numpy.asarray(test_data, dtype=theano.config.floatX))
+    #    # just zeroes
+    #    test_labels = T.cast(theano.shared(numpy.asarray(numpy.zeros(batch_size), dtype=theano.config.floatX)), 'int32')
+    #
+    #    ppm = theano.function([index], layer4.pred_probs(),
+    #        givens={
+    #            x: test_data[index * batch_size: (index + 1) * batch_size],
+    #            y: test_labels
+    #        }, on_unused_input='warn')
+    #
+    #    # p : predictions, we need to take argmax, p is 3-dim: (# loop iterations x batch_size x 2)
+    #    p = [ppm(ii) for ii in range( N // batch_size)]
+    #    #p_one = sum(p, [])
+    #    #print p
+    #    p = numpy.array(p).reshape((N, 10))
+    #    print (p)
+    #    p = numpy.argmax(p, axis=1)
+    #    p = p.astype(int)
+    #    RET.append(p)
+    #print RET
+    #
     print('Optimization complete.')
     print('Best validation score of %f %% obtained at iteration %i, '
           'with test performance %f %%' %
