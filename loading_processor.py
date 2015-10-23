@@ -86,3 +86,5 @@ def load_data():
     print 'hist'
     return rval
 
+if __name__ == "main":
+    load_data()

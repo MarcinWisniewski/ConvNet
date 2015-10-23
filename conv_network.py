@@ -16,7 +16,7 @@ class CNN(object):
         for parameter in self.params:
             parameter.set_value(weight.next())
 
-    def __init__(self, rng, input, nkerns, batch_size):
+    def __init__(self, rng, input, n_kerns, batch_size):
         # Reshape matrix of rasterized images of shape (batch_size, 28 * 28)
         # to a 4D tensor, compatible with our LeNetConvPoolLayer
         # (28, 28) is the size of MNIST images.
@@ -35,7 +35,7 @@ class CNN(object):
             rng,
             input=self.layer0_input,
             image_shape=(batch_size, 1, 1, self.input_signal_length),
-            filter_shape=(nkerns[0], 1, 1, self.layer0_filter_length),
+            filter_shape=(n_kerns[0], 1, 1, self.layer0_filter_length),
             poolsize=(1, self.layer0_pooling_factor)
         )
 
@@ -50,8 +50,8 @@ class CNN(object):
         self.layer1 = LeNetConvPoolLayer(
             rng,
             input=self.layer0.output,
-            image_shape=(batch_size, nkerns[0], 1, self.layer1_input_length),
-            filter_shape=(nkerns[1], nkerns[0], 1, self.layer1_filter_length),
+            image_shape=(batch_size, n_kerns[0], 1, self.layer1_input_length),
+            filter_shape=(n_kerns[1], n_kerns[0], 1, self.layer1_filter_length),
             poolsize=(1, self.layer1_pooling_factor)
         )
 
@@ -62,8 +62,8 @@ class CNN(object):
         self.layer2 = LeNetConvPoolLayer(
             rng,
             input=self.layer1.output,
-            image_shape=(batch_size, nkerns[1], 1, self.layer2_input_length),
-            filter_shape=(nkerns[2], nkerns[1], 1, self.layer2_filter_length),
+            image_shape=(batch_size, n_kerns[1], 1, self.layer2_input_length),
+            filter_shape=(n_kerns[2], n_kerns[1], 1, self.layer2_filter_length),
             poolsize=(1, self.layer2_pooling_factor)
         )
 
@@ -75,13 +75,13 @@ class CNN(object):
         #self.layer3_input_length = layer2_input_length / layer2_pooling_factor
         self.layer3_input_length = 93
         print 'layer 2 output', self.layer3_input_length
-        print 'layer 3 input: ', nkerns[2] * 1 * self.layer3_input_length
+        print 'layer 3 input: ', n_kerns[2] * 1 * self.layer3_input_length
         print 'layer 3 output: ', self.layer3_input_length / 2
         # construct a fully-connected sigmoidal layer
         self.layer3 = HiddenLayer(
             rng,
             input=self.layer3_input,
-            n_in=nkerns[2] * 1 * self.layer3_input_length,
+            n_in=n_kerns[2] * 1 * self.layer3_input_length,
             n_out=self.layer3_input_length / 2,
             activation=T.tanh
         )

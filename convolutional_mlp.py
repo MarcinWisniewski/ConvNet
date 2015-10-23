@@ -27,15 +27,12 @@ import timeit
 import numpy
 import theano
 import theano.tensor as T
-from logistic_sgd import LogisticRegression
 from loading_processor import load_data
-from mlp import HiddenLayer
-from conv_layer import LeNetConvPoolLayer
 from conv_network import CNN
-import matplotlib.pyplot as plt
+import pickle as cPickle
 
 def evaluate_lenet5(learning_rate=0.1, n_epochs=10,
-                    nkerns=[10, 20, 30], batch_size=1):
+                    n_kerns=[10, 20, 30], batch_size=10):
     """ Demonstrates lenet on MNIST dataset
 
     :type learning_rate: float
@@ -48,22 +45,22 @@ def evaluate_lenet5(learning_rate=0.1, n_epochs=10,
     :type dataset: string
     :param dataset: path to the dataset used for training /testing (MNIST here)
 
-    :type nkerns: list of ints
-    :param nkerns: number of kernels on each layer
+    :type n_kerns: list of ints
+    :param n_kerns: number of kernels on each layer
     """
 
     rng = numpy.random.RandomState(23455)
 
-    datasets = load_data()
+    data_sets = load_data()
 
-    train_set_x, train_set_y = datasets[0]
-    valid_set_x, valid_set_y = datasets[1]
-    test_set_x, test_set_y = datasets[2]
+    train_set_x, train_set_y = data_sets[0]
+    valid_set_x, valid_set_y = data_sets[1]
+    test_set_x, test_set_y = data_sets[2]
 
     # compute number of minibatches for training, validation and testing
-    print 'training example shape: ', train_set_x.get_value(borrow=True).shape
-    print 'testing example shape: ', test_set_x.get_value(borrow=True).shape
-    print 'valid example shape: ', valid_set_x.get_value(borrow=True).shape
+    print 'number of training examples: ', train_set_x.get_value(borrow=True).shape[0]
+    print 'number of testing examples: ', test_set_x.get_value(borrow=True).shape[0]
+    print 'number of valid examples: ', valid_set_x.get_value(borrow=True).shape[0]
     n_train_batches = train_set_x.get_value(borrow=True).shape[0]
     n_valid_batches = valid_set_x.get_value(borrow=True).shape[0]
     n_test_batches = test_set_x.get_value(borrow=True).shape[0]
@@ -83,7 +80,7 @@ def evaluate_lenet5(learning_rate=0.1, n_epochs=10,
     # BUILD ACTUAL MODEL #
     ######################
     print '... building the model'
-    cnn = CNN(rng, x, nkerns, batch_size)
+    cnn = CNN(rng, x, n_kerns, batch_size)
     # the cost we minimize during training is the NLL of the model
     cost = cnn.layer4.negative_log_likelihood(y)
 
@@ -129,15 +126,19 @@ def evaluate_lenet5(learning_rate=0.1, n_epochs=10,
         }
     )
 
-    test_labels = T.cast(theano.shared(numpy.asarray(numpy.zeros(train_set_x.get_value(borrow=True).shape[0]), dtype=theano.config.floatX)), 'int32')
-    input = T.tensor4('input')
-    predict = theano.function(
-        [index],
-        cnn.layer4.output(),
-        givens={x: train_set_x[index:],
-                y: test_labels},
-        on_unused_input='warn'
-    )
+    #test_labels = T.cast(theano.shared(numpy.asarray(numpy.zeros(
+    #    train_set_x.get_value(
+    #        borrow=True).shape[0]),
+    #    dtype=theano.config.floatX)),
+    #    'int32')
+    #input = T.tensor4('input')
+    #predict = theano.function(
+    #    [index],
+    #    cnn.layer4.output(),
+    #    givens={x: train_set_x[index:],
+    #            y: test_labels},
+    #    on_unused_input='warn'
+    #)
     # end-snippet-1
 
 
@@ -164,13 +165,12 @@ def evaluate_lenet5(learning_rate=0.1, n_epochs=10,
 
     epoch = 0
     done_looping = False
+    best_cnn = CNN(rng, x, n_kerns, batch_size)
 
     while (epoch < n_epochs) and (not done_looping):
-        epoch = epoch + 1
+        epoch += 1
         for minibatch_index in xrange(n_train_batches):
-
             iter = (epoch - 1) * n_train_batches + minibatch_index
-
             if iter % 100 == 0:
                 print 'training @ iter = ', iter
             cost_ij = train_model(minibatch_index)
@@ -208,51 +208,17 @@ def evaluate_lenet5(learning_rate=0.1, n_epochs=10,
                           (epoch, minibatch_index + 1, n_train_batches,
                            test_score * 100.))
 
+                    best_weights = cnn.__getstate__()
+                    best_cnn.__setstate__(best_weights)
+
             if patience <= iter:
                 done_looping = True
                 break
     end_time = timeit.default_timer()
-    #plt.figure(1)
-    #for i in range(nkerns[0]):
-    #    W = layer0.W.container.storage[0][i][0][0]
-    #    H = numpy.fft.fft(W, 1024)
-    #    plt.subplot(nkerns[0], 1, i+1)
-    #    plt.plot(20*numpy.log10(numpy.abs(H[0:512])))
-    #
-    #plt.figure(2)
-    #for i in range(nkerns[1]):
-    #    W = layer1.W.container.storage[0][i][0][0]
-    #    H = numpy.fft.fft(W, 1024)
-    #    plt.subplot(nkerns[1], 1, i+1)
-    #    plt.plot(20*numpy.log10(numpy.abs(H[0:512])))
-    #plt.show()
 
-    #RET = []
-    #train_set_x = train_set_x.get_value
-    #for it in range(len(train_set_x)):
-    #    test_data = train_set_x[it]
-    #    N = len(test_data)
-    #    test_data = theano.shared(numpy.asarray(test_data, dtype=theano.config.floatX))
-    #    # just zeroes
-    #    test_labels = T.cast(theano.shared(numpy.asarray(numpy.zeros(batch_size), dtype=theano.config.floatX)), 'int32')
-    #
-    #    ppm = theano.function([index], layer4.pred_probs(),
-    #        givens={
-    #            x: test_data[index * batch_size: (index + 1) * batch_size],
-    #            y: test_labels
-    #        }, on_unused_input='warn')
-    #
-    #    # p : predictions, we need to take argmax, p is 3-dim: (# loop iterations x batch_size x 2)
-    #    p = [ppm(ii) for ii in range( N // batch_size)]
-    #    #p_one = sum(p, [])
-    #    #print p
-    #    p = numpy.array(p).reshape((N, 10))
-    #    print (p)
-    #    p = numpy.argmax(p, axis=1)
-    #    p = p.astype(int)
-    #    RET.append(p)
-    #print RET
-    #
+    f = open('model.bin', 'wb')
+    cPickle.dump(best_cnn.__getstate__(), f, protocol=cPickle.HIGHEST_PROTOCOL)
+    f.close()
     print('Optimization complete.')
     print('Best validation score of %f %% obtained at iteration %i, '
           'with test performance %f %%' %
@@ -264,6 +230,3 @@ def evaluate_lenet5(learning_rate=0.1, n_epochs=10,
 if __name__ == '__main__':
     evaluate_lenet5()
 
-
-def experiment(state, channel):
-    evaluate_lenet5(state.learning_rate, dataset=state.dataset)

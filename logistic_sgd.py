@@ -163,7 +163,7 @@ class LogisticRegression(object):
         else:
             raise NotImplementedError()
 
-    def output(self):
+    def pred_probs(self):
         pp = T.nnet.softmax(T.dot(self.input, self.W) + self.b)
         return pp
 
