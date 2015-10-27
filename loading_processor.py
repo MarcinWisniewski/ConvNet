@@ -19,8 +19,8 @@ def load_data():
     #############
     print '... loading data'
     #files = ['100', '101', '103', '119']
-    #files = ['100', '119']
-    files = ['15s']
+    files = ['100', '119']
+    #files = ['15s']
 
     train_set = [[], []]
     valid_set = [[], []]
@@ -50,6 +50,7 @@ def load_data():
     #target to the example with the same index in the input.
 
     def shared_dataset(data_xy, borrow=True):
+
         """ Function that loads the dataset into shared variables
 
         The reason we store our dataset in shared variables is to allow
@@ -81,9 +82,8 @@ def load_data():
     rval = [(train_set_x, train_set_y), (valid_set_x, valid_set_y),
             (test_set_x, test_set_y)]
 
-    plt.hist(train_set[1][1:5000], 6)
-    plt.show()
-    print 'hist'
+    #plt.hist(train_set[1][1:5000], 6)
+    #plt.show()
     return rval
 
 if __name__ == "main":
