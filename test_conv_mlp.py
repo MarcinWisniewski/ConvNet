@@ -27,30 +27,15 @@ def recognize_signal():
     dp = DataProvider('C:\\Users\\user\\data\\MIT\\100', 100, 1024)
     dp.prepare_signal()
     train_small_set = dp.getTrainingSet()
-
+    signal = dp.signal
     test_data = train_small_set[0]
     N = len(test_data)
-    #test_data = theano.shared(np.asarray(test_data, dtype=theano.config.floatX))
-    # just zeroes
-    test_labels = T.cast(theano.shared(np.asarray(np.zeros(batch_size), dtype=theano.config.floatX)), 'int32')
-
-    #ppm = theano.function([index], cn_net.layer4.pred_probs(),
-    #    givens={
-    #        x: test_data[index * batch_size: (index + 1) * batch_size],
-    #        y: test_labels
-    #    }, on_unused_input='warn')
-
     ppm = theano.function(inputs=[cn_net.layer0_input], outputs=cn_net.layer4.y_pred)
-    # p : predictions, we need to take argmax, p is 3-dim: (# loop iterations x batch_size x 2)
-    single_test_data = np.array(test_data[0], ndmin=4)
-    p = ppm(single_test_data)
-    p = [ppm(ii) for ii in range(N // batch_size)]
-
-    p = np.array(p)
-    p = p.reshape((N, 6))
-    print (p)
-    p = np.argmax(p, axis=1)
-    p = p.astype(int)
+    p = [0, ]
+    for i in xrange(0, 10000, 2):
+        single_test_data = np.array(signal[i:i+1024], ndmin=4)
+        p += ppm(single_test_data)
+        p += 0
 
     plt.plot(p*100)
     plt.plot(dp.signal)
