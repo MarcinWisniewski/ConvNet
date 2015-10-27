@@ -16,7 +16,7 @@ def recognize_signal():
     x = T.matrix('x', dtype=theano.config.floatX)
     y = T.ivector('y')
     index = T.lscalar('index')
-    n_kerns = [10, 10, 10]
+    n_kerns = [10, 20, 20]
     batch_size = 1
     rng = np.random.RandomState(23455)
     f = open('model.bin', 'rb')
@@ -30,18 +30,20 @@ def recognize_signal():
 
     test_data = train_small_set[0]
     N = len(test_data)
-    test_data = theano.shared(np.asarray(test_data, dtype=theano.config.floatX))
+    #test_data = theano.shared(np.asarray(test_data, dtype=theano.config.floatX))
     # just zeroes
     test_labels = T.cast(theano.shared(np.asarray(np.zeros(batch_size), dtype=theano.config.floatX)), 'int32')
 
-    ppm = theano.function([index], cn_net.layer4.pred_probs(),
-        givens={
-            x: test_data[index * batch_size: (index + 1) * batch_size],
-            y: test_labels
-        }, on_unused_input='warn')
+    #ppm = theano.function([index], cn_net.layer4.pred_probs(),
+    #    givens={
+    #        x: test_data[index * batch_size: (index + 1) * batch_size],
+    #        y: test_labels
+    #    }, on_unused_input='warn')
 
-    #ppm = theano.function(inputs=[cn_net.layer0_input], outputs=cn_net.layer4.pred_probs())
+    ppm = theano.function(inputs=[cn_net.layer0_input], outputs=cn_net.layer4.y_pred)
     # p : predictions, we need to take argmax, p is 3-dim: (# loop iterations x batch_size x 2)
+    single_test_data = np.array(test_data[0], ndmin=4)
+    p = ppm(single_test_data)
     p = [ppm(ii) for ii in range(N // batch_size)]
 
     p = np.array(p)
