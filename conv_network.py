@@ -91,7 +91,7 @@ class CNN(object):
         print 'layer 4 input: ', self.layer4_input_length
         self.layer4 = LogisticRegression(input=self.layer3.output,
                                     n_in=self.layer4_input_length,
-                                    n_out=6)
+                                    n_out=4)
 
         self.errors = self.layer4.errors
 

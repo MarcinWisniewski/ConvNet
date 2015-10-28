@@ -4,9 +4,10 @@ import random as rn
 import matplotlib.pyplot as plt
 import numpy as np
 import timeit
+from wfdb import rdann, rdsamp, CODEDICT
 
 
-annot_dict = {'N': 1, 'V': 2, 'S': 3, 'F': 4, 'A': 5}
+annot_dict = {1: 1, 5: 2, 6: 2, 7: 3, 8: 3, 9: 3, 10: 2, 11: 3}
 
 
 class DataProvider(object):
@@ -26,35 +27,20 @@ class DataProvider(object):
         print 'object cleaned'
 
     def prepare_signal(self):
-        self.data_path = self.path + ".csv"
-        self.annotation_path = self.path + '.ann'
-        self._signal_reader = open(self.data_path)
-        self.annot_reader = open(self.annotation_path)
-        self.read_file()
+        start = 100
+        stop = 700
+        self.data_path = self.path
         timer_start = timeit.default_timer()
+        signal = rdsamp(self.path, start=start, end=stop)
+        self.signal = np.asarray(map(lambda sample: sample[2], signal[0]))
+        annots = rdann(self.path, 'atr', types=[1, 5, 6, 7, 8, 9, 10, 11], start=start, end=stop)
+        annots = map(lambda annot: (int(annot[0]), int(annot[-1])), annots)
+        self.annots = np.asarray(annots, dtype=('i4, i4'))
         self.organize_data()
         timer_stop = timeit.default_timer()
         print timer_stop - timer_start
-        self._signal_reader.close()
-        self.annot_reader.close()
         self.divideIndex = int(len(self.inputMatrix)*(float(self.percentageSplit)/100))
         self.divideIndexTestValid = int(len(self.inputMatrix)*(float(self.percentageSplitTestValid)/100))
-
-    def read_file(self):
-        signal = []
-        for line in self._signal_reader:
-            line = line.split()
-            signal.append(float(line[-2]))
-        self.signal = np.asarray(signal)
-
-        self.annot_reader.next()
-        annots = []
-        # annot model: [sample_no, annot, annot_code]
-        for line in self.annot_reader:
-            line = line.split()
-            if line[2] in annot_dict.keys():
-                annots.append((int(line[1]), line[2], annot_dict[line[2]]))
-        self.annots = np.asarray(annots, dtype=('i4, a3, i3'))
 
     def organize_data(self):
         def normalyse(frame):
@@ -70,7 +56,7 @@ class DataProvider(object):
                     if len(frame) == self.WIN:
                         frame = normalyse(frame)
                         self.inputMatrix.append(frame)
-                        self.classMatrix.append(annot[-1])
+                        self.classMatrix.append(annot_dict[annot[-1]])
                     #plt.plot(frame)
                     #plt.show()
 
@@ -114,5 +100,5 @@ class DataProvider(object):
 
 
 if __name__ == '__main__':
-    ecg = DataProvider('C:\\Users\\user\\data\\MIT\\100', 100, 1024)
+    ecg = DataProvider('C:\\Users\\user\\data\\mitdb\\100', 100, 1024)
     ecg.prepare_signal()

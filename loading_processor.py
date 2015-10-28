@@ -18,8 +18,8 @@ def load_data():
     # LOAD DATA #
     #############
     print '... loading data'
-    #files = ['100', '101', '103', '119']
-    files = ['100', '119']
+    files = ['100', '101', '103', '106', '119']
+    #files = ['100', '119']
     #files = ['15s']
 
     train_set = [[], []]
@@ -27,7 +27,7 @@ def load_data():
     test_set = [[], []]
     for file in files:
         print 'loading file: ', file
-        dp = DataProvider('C:\\Users\\user\\data\\MIT\\'+file, 70, 1024)
+        dp = DataProvider('C:\\Users\\user\\data\\mitdb\\'+file, 70, 1024)
         dp.prepare_signal()
         dp.reshuffleData()
         train_small_set = dp.getTrainingSet()
@@ -86,5 +86,6 @@ def load_data():
     #plt.show()
     return rval
 
-if __name__ == "main":
+if __name__ == '__main__':
     load_data()
+    print 1
