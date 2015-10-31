@@ -29,6 +29,9 @@ class DataProvider(object):
     def prepare_signal(self):
         start = 100
         stop = 700
+
+        start = 0
+        stop = -1
         self.data_path = self.path
         timer_start = timeit.default_timer()
         signal = rdsamp(self.path, start=start, end=stop)
