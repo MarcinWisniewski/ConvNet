@@ -18,18 +18,19 @@ def load_data():
     # LOAD DATA #
     #############
     print '... loading data'
-    files = ['100', '101', '103', '106', '119']
+    files = ['100', '101', '103', '105', '106', '112', '113', '114', '116', '119', '200', '208', '209', '222', '233']
     #files = ['100', '119']
-    #files = ['15s']
+    #files = ['100']
 
     train_set = [[], []]
     valid_set = [[], []]
     test_set = [[], []]
     for file in files:
         print 'loading file: ', file
-        dp = DataProvider('C:\\Users\\user\\data\\mitdb\\'+file, 70, 1024)
+        dp = DataProvider('C:\\Users\\user\\data\\mitdb\\'+file, split_factor=70,
+                          window=1024, start=0, stop=700)
         dp.prepare_signal()
-        dp.reshuffleData()
+        dp.reshuffle_data()
         train_small_set = dp.getTrainingSet()
         train_set[0] += train_small_set[0]
         train_set[1] += train_small_set[1]

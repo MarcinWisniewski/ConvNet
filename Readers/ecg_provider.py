@@ -1,21 +1,35 @@
 __author__ = 'MW'
 
 import random as rn
-import matplotlib.pyplot as plt
 import numpy as np
 import timeit
-from wfdb import rdann, rdsamp, CODEDICT
+from WFDBTools.wfdb import rdann, rdsamp
+import matplotlib.pyplot as plt
 
 
-annot_dict = {1: 1, 5: 2, 6: 2, 7: 3, 8: 3, 9: 3, 10: 2, 11: 3}
+annot_dict = {1: 1,
+              5: 2, 6: 2,
+              7: 3, 8: 3, 9: 3, 11: 3}
+#1 : 'NORMAL',	# normal beat */
+#4 : 'ABERR',	# aberrated atrial premature beat */
+#5 : 'PVC',	# premature ventricular contraction */
+#6 : 'FUSION',	# fusion of ventricular and normal beat */
+#7 : 'NPC',	# nodal (junctional) premature beat */
+#8 : 'APC',	# atrial premature contraction */
+#9 : 'SVPB',	# premature or ectopic supraventricular beat */
+#10 : 'VESC',	# ventricular escape beat */
+#11 : 'NESC',	# nodal (junctional) escape beat */
+#12 : 'PACE',	# paced beat */
 
 
 class DataProvider(object):
-    def __init__(self, path, split_factor, window):
+    def __init__(self, path, split_factor, window=1024, start=0, stop=-1):
         assert isinstance(path, str), 'wrong path'
         rn.seed(2121212)
         self.path = path
         self.WIN = window
+        self.start = start
+        self.stop = stop
         self.inputMatrix = []
         self.classMatrix = []
         self.percentageSplit = split_factor
@@ -27,18 +41,15 @@ class DataProvider(object):
         print 'object cleaned'
 
     def prepare_signal(self):
-        start = 100
-        stop = 700
-
-        start = 0
-        stop = -1
-        self.data_path = self.path
         timer_start = timeit.default_timer()
-        signal = rdsamp(self.path, start=start, end=stop)
+        signal = rdsamp(self.path, end=self.stop)
         self.signal = np.asarray(map(lambda sample: sample[2], signal[0]))
-        annots = rdann(self.path, 'atr', types=[1, 5, 6, 7, 8, 9, 10, 11], start=start, end=stop)
+        annots = rdann(self.path, 'atr', types=[1, 5, 6, 7, 8, 9, 11], start=self.start, end=self.stop)
         annots = map(lambda annot: (int(annot[0]), int(annot[-1])), annots)
         self.annots = np.asarray(annots, dtype=('i4, i4'))
+        all_annots = rdann(self.path, 'atr', types=range(1, 13), start=self.start, end=self.stop)
+        all_annots = map(lambda annot: (int(annot[0]), int(annot[-1])), all_annots)
+        self.all_annots = np.asarray(all_annots, dtype=('i4, i4'))
         self.organize_data()
         timer_stop = timeit.default_timer()
         print timer_stop - timer_start
@@ -62,26 +73,23 @@ class DataProvider(object):
                         self.classMatrix.append(annot_dict[annot[-1]])
                     #plt.plot(frame)
                     #plt.show()
-
-        for annot_index in xrange(len(self.annots)-1):
-            if self.annots[annot_index][0]-self.WIN/2 > 0 and \
-                                    self.annots[annot_index+1][0]+self.WIN/2 < signal_length:
-                rr = (self.annots[annot_index+1][0]-CLASS_WIN)-(self.annots[annot_index][0]+CLASS_WIN)
-                if rr > CLASS_WIN:
-                    indexes = range(rr)
-                    rn.shuffle(indexes)
-                    for index in indexes[:CLASS_WIN]:
-                        reference_index = self.annots[annot_index][0]+CLASS_WIN + index
-                        frame = np.copy(self.signal[reference_index - self.WIN/2 : reference_index + self.WIN/2])
-                        if len(frame) == self.WIN:
-                            frame = normalyse(frame)
-                            self.inputMatrix.append(frame)
-                            self.classMatrix.append(0)
+        for i in range(len(self.all_annots)-1):
+            if self.all_annots[i][0]+CLASS_WIN/2-self.WIN/2 > 0 and \
+                                            self.all_annots[i+1][0]-CLASS_WIN/2+self.WIN/2 < signal_length:
+                rr_distance = self.all_annots[i+1][0] - self.all_annots[i][0] - CLASS_WIN
+                indexes_of_isoline = range(self.all_annots[i][0]+CLASS_WIN/2,
+                                           self.all_annots[i][0]+CLASS_WIN/2 + rr_distance)
+                rn.shuffle(indexes_of_isoline)
+                for index in xrange(CLASS_WIN*2):
+                    frame = np.copy(self.signal[indexes_of_isoline[index]-self.WIN/2:
+                    indexes_of_isoline[index]+self.WIN/2])
+                    if len(frame) == self.WIN:
+                        frame = normalyse(frame)
                         #plt.plot(frame)
-                        #plt.show()
+                        self.inputMatrix.append(frame)
+                        self.classMatrix.append(0)
 
-
-    def reshuffleData(self):
+    def reshuffle_data(self):
         tempMtx = []
         tempCls = []
         indexes = range(len(self.inputMatrix))

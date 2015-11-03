@@ -24,16 +24,18 @@ References:
 import os
 import sys
 import timeit
+import pickle as cPickle
+
 import numpy
 import theano
 import theano.tensor as T
-from loading_processor import load_data
-from conv_network import CNN
-import pickle as cPickle
+
+from Readers.loading_processor import load_data
+from CNN.conv_network import CNN
 
 
 def evaluate_lenet5(learning_rate=0.1, n_epochs=10,
-                    n_kerns=[10, 20, 20], batch_size=1000):
+                    n_kerns=[10, 20, 20], batch_size=3000):
     """ Demonstrates lenet on MNIST dataset
 
     :type learning_rate: float
@@ -68,6 +70,7 @@ def evaluate_lenet5(learning_rate=0.1, n_epochs=10,
     n_train_batches /= batch_size
     n_valid_batches /= batch_size
     n_test_batches /= batch_size
+
 
     # allocate symbolic variables for the data
     index = T.lscalar()  # index to a [mini]batch
