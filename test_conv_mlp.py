@@ -31,7 +31,7 @@ def recognize_signal():
     cn_net.__setstate__(cPickle.load(f))
     f.close()
     window = 1024
-    file = 'C:\\Users\\user\\data\\mitdb\\108'
+    file = 'C:\\Users\\user\\data\\mitdb\\222'
     dp = DataProvider(file, split_factor=100, window=window)
     dp.prepare_signal()
     signal = dp.signal
@@ -41,7 +41,6 @@ def recognize_signal():
     end_position = len(signal)
     p = np.zeros((end_position - start_position)+513)
 
-    annot_list = []
     start_time = timeit.default_timer()
     step = 8
     for i in xrange(start_position, end_position, step):
@@ -57,25 +56,22 @@ def recognize_signal():
             result = ppm(single_test_data)
             #p[i+window/2: i+window/2+step] = result[0]
             p[i+window/2] = result[0]
-            if i > 2*step and p[i+window/2] != 0 and p[i+window/2 - step] != 0:
-                annot_list.append((i+window/2-step, 1))
 
-    #previous_no_qrs_probability = 1
-    #annot_list = []
-    #qrs_detected = False
-    #WIN = 16
-    #print 'Finding qrs positions'
-    #for i in xrange(len(p)-WIN):
-    #    hist, bounds = np.histogram(p[i:i+WIN], bins=[0, 1, 2, 3, 4], density=True)
-    #    if hist[0] < previous_no_qrs_probability and hist[0] < 0.25:
-    #        qrs_detected = True
-    #        sample_index = i+WIN/2
-    #        annotation = annotation_dict[int(hist.argmax())]
-    #    elif hist[0] < previous_no_qrs_probability and qrs_detected:
-    #        annot_list.append((sample_index, annotation))
-    #        qrs_detected = False
-    #    previous_no_qrs_probability = hist[0]
-    #
+    previous_no_qrs_probability = 1
+    annot_list = []
+    qrs_detected = False
+    WIN = 16
+    print 'Finding qrs positions'
+    for i in xrange(len(p)-WIN):
+        hist, bounds = np.histogram(p[i:i+WIN], bins=[0, 1, 2, 3, 4], density=True)
+        if hist[0] < previous_no_qrs_probability and hist[0] < 0.25:
+            qrs_detected = True
+            sample_index = i+WIN/2
+            annotation = annotation_dict[int(hist.argmax())]
+        elif hist[0] < previous_no_qrs_probability and qrs_detected:
+            annot_list.append((sample_index, annotation))
+            qrs_detected = False
+        previous_no_qrs_probability = hist[0]
 
     print 'saving annot file'
     wrann(annot_list, file +'.ta2')
