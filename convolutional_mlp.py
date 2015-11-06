@@ -35,7 +35,7 @@ from CNN.conv_network import CNN
 
 
 def evaluate_lenet5(learning_rate=0.1, n_epochs=10,
-                    n_kerns=[10, 20, 20], batch_size=3000):
+                    n_kerns=[10, 20, 20], batch_size=800):
     """ Demonstrates lenet on MNIST dataset
 
     :type learning_rate: float
@@ -54,7 +54,7 @@ def evaluate_lenet5(learning_rate=0.1, n_epochs=10,
 
     rng = numpy.random.RandomState(23455)
 
-    data_sets = load_data()
+    data_sets = load_data(file_name='data_3.bin', read_data=True)
 
     train_set_x, train_set_y = data_sets[0]
     valid_set_x, valid_set_y = data_sets[1]
@@ -130,25 +130,13 @@ def evaluate_lenet5(learning_rate=0.1, n_epochs=10,
         }
     )
 
-    #test_labels = T.cast(theano.shared(numpy.asarray(numpy.zeros(
-    #    train_set_x.get_value(
-    #        borrow=True).shape[0]),
-    #    dtype=theano.config.floatX)),
-    #    'int32')
-    #input = T.tensor4('input')
-    #predict = theano.function(
-    #    [index],
-    #    cnn.layer4.output(),
-    #    givens={x: train_set_x[index:],
-    #            y: test_labels},
-    #    on_unused_input='warn'
-    #)
-    # end-snippet-1
-
-
     ###############
     # TRAIN MODEL #
     ###############
+
+    f = open('model_v2.bin', 'rb')
+    cnn.__setstate__(cPickle.load(f))
+    f.close()
     print '... training'
     # early-stopping parameters
     patience = 1000  # look as this many examples regardless
@@ -220,7 +208,7 @@ def evaluate_lenet5(learning_rate=0.1, n_epochs=10,
                 break
     end_time = timeit.default_timer()
 
-    f = open('model.bin', 'wb')
+    f = open('model_v3.bin', 'wb')
     cPickle.dump(best_cnn.__getstate__(), f, protocol=cPickle.HIGHEST_PROTOCOL)
     f.close()
     print('Optimization complete.')
