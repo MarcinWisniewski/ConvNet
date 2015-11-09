@@ -54,8 +54,8 @@ def recognize_signal():
             single_test_data = (single_test_data-single_test_data.mean())/np.abs(single_test_data.max())
             #single_test_data /= np.abs(single_test_data.max())
             result = ppm(single_test_data)
-            #p[i+window/2: i+window/2+step] = result[0]
-            p[i+window/2] = result[0]
+            p[i+window/2: i+window/2+step] = result[0]
+            #p[i+window/2] = result[0]
 
     previous_no_qrs_probability = 1
     annot_list = []
@@ -74,7 +74,7 @@ def recognize_signal():
         previous_no_qrs_probability = hist[0]
 
     print 'saving annot file'
-    wrann(annot_list, file +'.ta2')
+    wrann(annot_list, file +'.ta5')
     plt.plot((dp.signal-dp.signal.mean())/(dp.signal.max()*0.2))
     plt.plot(p, 'r')
     plt.show()
