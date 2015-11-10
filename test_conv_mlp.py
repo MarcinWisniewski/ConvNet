@@ -35,6 +35,7 @@ def recognize_signal():
     dp = DataProvider(file, split_factor=100, window=window)
     dp.prepare_signal()
     signal = dp.signal
+    reference_annots = dp.annots
     print len(signal)
     ppm = theano.function(inputs=[cn_net.layer0_input], outputs=cn_net.layer4.y_pred)
     start_position = 0
@@ -42,7 +43,10 @@ def recognize_signal():
     p = np.zeros((end_position - start_position)+513)
 
     start_time = timeit.default_timer()
-    step = 8
+    step = 4
+    annot_list = []
+    qrs_detected = False
+    skip_cntr = 0
     for i in xrange(start_position, end_position, step):
         temp_sig = signal[i:i+window]
         if i % 1000 == 0:
@@ -54,29 +58,50 @@ def recognize_signal():
             single_test_data = (single_test_data-single_test_data.mean())/np.abs(single_test_data.max())
             #single_test_data /= np.abs(single_test_data.max())
             result = ppm(single_test_data)
-            p[i+window/2: i+window/2+step] = result[0]
-            #p[i+window/2] = result[0]
+            #p[i+window/2: i+window/2+step] = result[0]
+            p[i+window/2] = result[0]
+            hist, bounds = np.histogram(p[i-2*step:i:step], bins=[0, 1, 2, 3, 4], density=True)
+            if hist[0] < 0.5 and not qrs_detected:
+                skip_cntr = 1
+                qrs_detected = True
+                sample_index = i-2*step
+                annotation = annotation_dict[int(hist.argmax())]
+                annot_list.append((sample_index, annotation))
+            elif skip_cntr > 0:
+                skip_cntr -= 1
+            else:
+                qrs_detected = False
+                skip_cntr = 0
 
-    previous_no_qrs_probability = 1
-    annot_list = []
-    qrs_detected = False
-    WIN = 16
-    print 'Finding qrs positions'
-    for i in xrange(len(p)-WIN):
-        hist, bounds = np.histogram(p[i:i+WIN], bins=[0, 1, 2, 3, 4], density=True)
-        if hist[0] < previous_no_qrs_probability and hist[0] < 0.25:
-            qrs_detected = True
-            sample_index = i+WIN/2
-            annotation = annotation_dict[int(hist.argmax())]
-        elif hist[0] < previous_no_qrs_probability and qrs_detected:
-            annot_list.append((sample_index, annotation))
-            qrs_detected = False
-        previous_no_qrs_probability = hist[0]
+
+    final_results = [0 for i in signal]
+    ref_annot_in_signal = [0 for i in signal]
+    ref_annot_idx = map(lambda (ind, ann): ind, reference_annots)
+    for ind in ref_annot_idx:
+        ref_annot_in_signal[ind] = 1
+
+
+    test_annot_in_signal = [0 for i in signal]
+    test_annot_idx = map(lambda (ind, ann): ind, annot_list)
+    for ind in test_annot_idx:
+        test_annot_in_signal[ind] = 1
+    acceptation_win = 54
+    for i in range(len(final_results)):
+        if 1 in ref_annot_in_signal[i:i+acceptation_win] and 1 in test_annot_in_signal[i:i+acceptation_win]:
+            final_results[i] = 1
+        elif 1 in ref_annot_in_signal[i:i+acceptation_win] and 1 not in test_annot_in_signal[i:i+acceptation_win]:
+            final_results[i] = -1
+        elif 1 not in ref_annot_in_signal[i:i+acceptation_win] and 1 in test_annot_in_signal[i:i+acceptation_win]:
+            final_results[i] = -2
+        if i > acceptation_win:
+            final_results[i-acceptation_win/2] = np.median(final_results[i-acceptation_win:i])
+
 
     print 'saving annot file'
     wrann(annot_list, file +'.ta5')
     plt.plot((dp.signal-dp.signal.mean())/(dp.signal.max()*0.2))
-    plt.plot(p, 'r')
+    plt.plot(p, 'g')
+    plt.plot(final_results, 'r')
     plt.show()
     print 1
 
