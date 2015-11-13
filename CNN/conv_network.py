@@ -4,7 +4,7 @@ from conv_layer import LeNetConvPoolLayer
 from mlp import HiddenLayer
 from logistic_sgd import LogisticRegression
 import theano.tensor as T
-
+import theano
 
 class CNN(object):
     def __getstate__(self):

@@ -1,10 +1,10 @@
 __author__ = 'Marcin'
-import numpy
 
+import numpy
 import theano
-import theano.tensor as T
 from theano.tensor.signal import downsample
 from theano.tensor.nnet import conv
+
 
 class LeNetConvPoolLayer(object):
     """Pool Layer of a convolutional network """

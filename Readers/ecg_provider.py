@@ -4,7 +4,16 @@ import random as rn
 import numpy as np
 import timeit
 from WFDBTools.wfdb import rdann, rdsamp
+from scipy.signal import sosfilt, lfilter
+
 import matplotlib.pyplot as plt
+
+
+SOS = [[1,	-2,	1,	1,	-1.99712697698516,	0.997192422553049],
+       [1,	-2,	1,	1,	-1.99187190140264,	0.991937174762453],
+       [1,	-2,	1,	1,	-1.98760834267259,	0.987673476316188],
+       [1,	-2,	1,	1,	-1.98483533312596,	0.984900375898430],
+       [1,	-1,	0,	1,	-0.991937043188383,	0]]
 
 
 annot_dict = {1: 1,
@@ -44,6 +53,10 @@ class DataProvider(object):
         timer_start = timeit.default_timer()
         signal = rdsamp(self.path, end=self.stop)
         self.signal = np.asarray(map(lambda sample: sample[2], signal[0]))
+        self.signal = sosfilt(SOS, self.signal)
+        #plt.plot(self.signal)
+        #plt.plot(self.filtred_signal, 'r')
+        #plt.show()
         annots = rdann(self.path, 'atr', types=[1, 5, 6, 7, 8, 9, 11], start=self.start, end=self.stop)
         annots = map(lambda annot: (int(annot[0]), int(annot[-1])), annots)
         self.annots = np.asarray(annots, dtype=('i4, i4'))
