@@ -13,11 +13,7 @@ from Readers.ecg_provider import DataProvider
 from WFDBTools.wfdb_wrann import wrann
 import cProfile
 
-theano.config.exception_verbosity = 'high'
-theano.config.mode = 'FAST_RUN'
-theano.config.floatX = 'float32'
 
-print theano.config
 # dict from class to wfdb code
 annotation_dict = {0: 0, 1: 1, 2: 5, 3: 9}
 files = ['100', '101', '103', '105', '106', '107',
@@ -34,7 +30,7 @@ def recognize_signal():
     n_kerns = [10, 10, 10]
     batch_size = 1
     rng = np.random.RandomState(23455)
-    f = open('model_v5.bin', 'rb')
+    f = open('model_v4.bin', 'rb')
     cn_net = CNN(rng, x, n_kerns, batch_size)
     cn_net.__setstate__(cPickle.load(f))
     f.close()
@@ -82,36 +78,8 @@ def recognize_signal():
                     qrs_detected = False
                     skip_cntr = 0
 
-        #final_results = [0 for i in signal]
-        #ref_annot_in_signal = [0 for i in signal]
-        #ref_annot_idx = map(lambda (ind, ann): ind, reference_annots)
-        #for ind in ref_annot_idx:
-        #    ref_annot_in_signal[ind] = 1
-        #
-        #test_annot_in_signal = [0 for i in signal]
-        #test_annot_idx = map(lambda (ind, ann): ind, annot_list)
-        #for ind in test_annot_idx:
-        #    test_annot_in_signal[ind] = 1
-        #acceptation_win = 54
-        #for i in range(len(final_results)):
-        #    if 1 in ref_annot_in_signal[i:i+acceptation_win] and 1 in test_annot_in_signal[i:i+acceptation_win]:
-        #        final_results[i] = 1
-        #    elif 1 in ref_annot_in_signal[i:i+acceptation_win] and 1 not in test_annot_in_signal[i:i+acceptation_win]:
-        #        final_results[i] = -1
-        #    elif 1 not in ref_annot_in_signal[i:i+acceptation_win] and 1 in test_annot_in_signal[i:i+acceptation_win]:
-        #        final_results[i] = -2
-        #    if i > acceptation_win:
-        #        final_results[i-acceptation_win/2] = np.median(final_results[i-acceptation_win:i])
-
-
         print 'saving annot file'
-        wrann(annot_list, file_path +'.tan2')
-        #call(['bxb', '-r', file, '-a', 'atr', 'tan', '-f', '0', '-L', 'result.bxb', 'result2.sht'])
-
-        #plt.plot((dp.signal-dp.signal.mean())/(dp.signal.max()*0.2))
-        #plt.plot(p, 'g')
-        #plt.plot(final_results, 'r')
-        #plt.show()
+        wrann(annot_list, file_path +'.tan4')
         print timeit.default_timer() - total_time
 
 
