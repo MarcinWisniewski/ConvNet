@@ -5,7 +5,7 @@ import numpy as np
 import timeit
 from WFDBTools.wfdb import rdann, rdsamp
 from scipy.signal import sosfilt, lfilter
-
+#from scipy import signal as _signal
 import matplotlib.pyplot as plt
 
 
@@ -124,5 +124,5 @@ class DataProvider(object):
 
 
 if __name__ == '__main__':
-    ecg = DataProvider('C:\\Users\\user\\data\\mitdb\\100', 100, 1024)
+    ecg = DataProvider('~/ubuntu/data/mitdb/100', 100, 1024)
     ecg.prepare_signal()

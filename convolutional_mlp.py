@@ -35,7 +35,7 @@ from CNN.conv_network import CNN
 
 
 def evaluate_lenet5(learning_rate=0.1, n_epochs=10,
-                    n_kerns=[10, 10, 10], batch_size=800):
+                    n_kerns=[10, 15, 20], batch_size=1500):
     """ Demonstrates lenet on MNIST dataset
 
     :type learning_rate: float

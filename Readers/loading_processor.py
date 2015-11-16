@@ -52,9 +52,9 @@ def load_data(file_name='data.bin', write_data=False, read_data=False):
     else:
         print '... loading data from datasets'
         files = ['100', '101', '103', '105', '106', '107',
-                 #'108', '109', '111', '112', '113', '114',
-                 #'115', '116', '117', '118', '119', '121',
-                 #'122', '123', '124', '200', '201', '202',
+                # '108', '109', '111', '112', '113', '114',
+                 '115', '116', '117', '118', '119', '121',
+                # '122', '123', '124', '200', '201', '202',
                  '203', '205', '207', '208', '209', '210',
                  '212', '213', '214', '215', '217', '219',
                  #'220', '221', '222', '223', '228', '230',
@@ -67,8 +67,8 @@ def load_data(file_name='data.bin', write_data=False, read_data=False):
         test_set = [[], []]
         for file in files:
             print 'loading file: ', file
-            dp = DataProvider('C:\\Users\\user\\data\\mitdb\\'+file, split_factor=70,
-                              window=1024, start=0, stop=460)
+            dp = DataProvider('/home/ubuntu/data/mitdb/'+file, split_factor=85,
+                              window=1024, start=0, stop=500)
             dp.prepare_signal()
             dp.reshuffle_data()
             train_small_set = dp.getTrainingSet()
