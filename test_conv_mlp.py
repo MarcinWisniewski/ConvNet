@@ -6,6 +6,7 @@ import timeit
 import numpy as np
 import theano.tensor as T
 import theano
+import os
 import matplotlib.pyplot as plt
 
 from CNN.conv_network import CNN
@@ -27,7 +28,7 @@ files = ['100', '101', '103', '105', '106', '107',
 
 def recognize_signal():
     x = T.matrix('x', dtype=theano.config.floatX)
-    n_kerns = [10, 10, 10]
+    n_kerns = [10, 15, 20]
     batch_size = 1
     rng = np.random.RandomState(23455)
     f = open('model_v4.bin', 'rb')
@@ -38,7 +39,8 @@ def recognize_signal():
     for record in files:
         print '...analysing record', record
         total_time = timeit.default_timer()
-        file_path = 'C:\\Users\\user\\data\\mitdb\\' + record
+        #file_path = 'C:\\Users\\user\\data\\mitdb' + record
+        file_path = os.path.join(os.path.sep, 'home', 'marcin', 'data', 'mitdb', record)
         dp = DataProvider(file_path, split_factor=100, window=window)
         dp.prepare_signal()
         signal = dp.signal

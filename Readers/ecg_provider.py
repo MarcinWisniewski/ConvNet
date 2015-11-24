@@ -54,9 +54,6 @@ class DataProvider(object):
         signal = rdsamp(self.path, end=self.stop)
         self.signal = np.asarray(map(lambda sample: sample[2], signal[0]))
         self.signal = sosfilt(SOS, self.signal)
-        #plt.plot(self.signal)
-        #plt.plot(self.filtred_signal, 'r')
-        #plt.show()
         annots = rdann(self.path, 'atr', types=[1, 5, 6, 7, 8, 9, 11], start=self.start, end=self.stop)
         annots = map(lambda annot: (int(annot[0]), int(annot[-1])), annots)
         self.annots = np.asarray(annots, dtype=('i4, i4'))
@@ -83,9 +80,9 @@ class DataProvider(object):
                     if len(frame) == self.WIN:
                         frame = normalyse(frame)
                         self.inputMatrix.append(frame)
-                        self.classMatrix.append(annot_dict[annot[-1]])
-                    #plt.plot(frame)
-                    #plt.show()
+                        #self.classMatrix.append(annot_dict[annot[-1]])
+                        self.classMatrix.append(1)
+
         for i in range(len(self.all_annots)-1):
             if self.all_annots[i][0]+CLASS_WIN/2-self.WIN/2 > 0 and \
                                             self.all_annots[i+1][0]-CLASS_WIN/2+self.WIN/2 < signal_length:

@@ -55,7 +55,8 @@ def evaluate_lenet5(learning_rate=0.1, n_epochs=10,
     rng = numpy.random.RandomState(23455)
 
     #data_sets = load_data(file_name='data_3.bin', read_data=True)
-    data_sets = load_data()
+    db_path = os.path.join(os.path.sep, 'home', 'marcin', 'data', 'mitdb')
+    data_sets = load_data(db_path)
 
     train_set_x, train_set_y = data_sets[0]
     valid_set_x, valid_set_y = data_sets[1]

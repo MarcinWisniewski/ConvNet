@@ -1,5 +1,6 @@
 __author__ = 'MW'
 
+import os
 import theano
 import numpy
 from ecg_provider import DataProvider
@@ -7,7 +8,7 @@ import matplotlib.pyplot as plt
 import cPickle
 
 
-def load_data(file_name='data.bin', write_data=False, read_data=False):
+def load_data(db_path, file_name='data.bin', write_data=False, read_data=False):
 
     ''' Loads the dataset
 
@@ -53,10 +54,10 @@ def load_data(file_name='data.bin', write_data=False, read_data=False):
         print '... loading data from datasets'
         files = ['100', '101', '103', '105', '106', '107',
                 # '108', '109', '111', '112', '113', '114',
-                 '115', '116', '117', '118', '119', '121',
+                #'115', '116', '117', '118', '119', '121',
                 # '122', '123', '124', '200', '201', '202',
-                 '203', '205', '207', '208', '209', '210',
-                 '212', '213', '214', '215', '217', '219',
+                # '203', '205', '207', '208', '209', '210',
+                 #'212', '213', '214', '215', '217', '219',
                  #'220', '221', '222', '223', '228', '230',
                  '231', '232', '233', '234']
         #files = ['100', '119']
@@ -67,7 +68,7 @@ def load_data(file_name='data.bin', write_data=False, read_data=False):
         test_set = [[], []]
         for file in files:
             print 'loading file: ', file
-            dp = DataProvider('/home/ubuntu/data/mitdb/'+file, split_factor=85,
+            dp = DataProvider(os.path.join(db_path, file), split_factor=85,
                               window=1024, start=0, stop=500)
             dp.prepare_signal()
             dp.reshuffle_data()
