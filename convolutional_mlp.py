@@ -181,7 +181,6 @@ def evaluate_lenet5(learning_rate=0.1, n_epochs=10,
 
                 # if we got the best validation score until now
                 if this_validation_loss < best_validation_loss:
-
                     #improve patience if loss improvement is good enough
                     if this_validation_loss < best_validation_loss *  \
                        improvement_threshold:
@@ -204,15 +203,16 @@ def evaluate_lenet5(learning_rate=0.1, n_epochs=10,
 
                     best_weights = cnn.__getstate__()
                     best_cnn.__setstate__(best_weights)
+                    f = open('model.bin', 'wb')
+                    cPickle.dump(best_cnn.__getstate__(), f, protocol=cPickle.HIGHEST_PROTOCOL)
+                    f.close()
 
             if patience <= iter:
                 done_looping = True
                 break
     end_time = timeit.default_timer()
 
-    f = open('model_v4.bin', 'wb')
-    cPickle.dump(best_cnn.__getstate__(), f, protocol=cPickle.HIGHEST_PROTOCOL)
-    f.close()
+
     print('Optimization complete.')
     print('Best validation score of %f %% obtained at iteration %i, '
           'with test performance %f %%' %

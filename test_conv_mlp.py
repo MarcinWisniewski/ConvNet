@@ -17,14 +17,11 @@ import cProfile
 
 # dict from class to wfdb code
 annotation_dict = {0: 0, 1: 1, 2: 5, 3: 9}
-files = ['100', '101', '103', '105', '106', '107',
-        '108', '109', '111', '112', '113', '114',
-        '115', '116', '117', '118', '119', '121',
-        '122', '123', '124', '200', '201', '202',
-        '203', '205', '207', '208', '209', '210',
-        '212', '213', '214', '215', '217', '219',
-        '220', '221', '222', '223', '228', '230',
-        '231', '232', '233', '234']
+db_path = '/home/marcin/data/mitdb'
+
+files = os.listdir(db_path)
+files = [record.split('.')[0] for record in files if record.split('.')[-1] == 'dat']
+
 
 def recognize_signal():
     x = T.matrix('x', dtype=theano.config.floatX)
@@ -39,8 +36,7 @@ def recognize_signal():
     for record in files:
         print '...analysing record', record
         total_time = timeit.default_timer()
-        #file_path = 'C:\\Users\\user\\data\\mitdb' + record
-        file_path = os.path.join(os.path.sep, 'home', 'marcin', 'data', 'mitdb', record)
+        file_path = os.path.join(db_path, record)
         dp = DataProvider(file_path, split_factor=100, window=window)
         dp.prepare_signal()
         signal = dp.signal
@@ -81,7 +77,7 @@ def recognize_signal():
                     skip_cntr = 0
 
         print 'saving annot file'
-        wrann(annot_list, file_path +'.tan4')
+        wrann(annot_list, file_path +'.tan')
         print timeit.default_timer() - total_time
 
 
