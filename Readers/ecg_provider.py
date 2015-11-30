@@ -16,9 +16,10 @@ SOS = [[1,	-2,	1,	1,	-1.99712697698516,	0.997192422553049],
        [1,	-1,	0,	1,	-0.991937043188383,	0]]
 
 
-annot_dict = {1: 1,
-              5: 2, 6: 2,
-              7: 3, 8: 3, 9: 3, 11: 3}
+annot_dict = {1: 1,                          #N
+              5: 2, 6: 2, 10: 2,             #V, F, E
+              7: 3, 8: 3, 9: 3, 11: 3, 4: 3} #J, A, S, j, a,
+
 #1 : 'NORMAL',	# normal beat */
 #4 : 'ABERR',	# aberrated atrial premature beat */
 #5 : 'PVC',	# premature ventricular contraction */
@@ -54,7 +55,7 @@ class DataProvider(object):
         signal = rdsamp(self.path, end=self.stop)
         self.signal = np.asarray(map(lambda sample: sample[2], signal[0]))
         self.signal = sosfilt(SOS, self.signal)
-        annots = rdann(self.path, 'atr', types=[1, 5, 6, 7, 8, 9, 11], start=self.start, end=self.stop)
+        annots = rdann(self.path, 'atr', types=annot_dict.keys(), start=self.start, end=self.stop)
         annots = map(lambda annot: (int(annot[0]), int(annot[-1])), annots)
         self.annots = np.asarray(annots, dtype=('i4, i4'))
         all_annots = rdann(self.path, 'atr', types=range(1, 13), start=self.start, end=self.stop)
@@ -80,8 +81,8 @@ class DataProvider(object):
                     if len(frame) == self.WIN:
                         frame = normalyse(frame)
                         self.inputMatrix.append(frame)
-                        #self.classMatrix.append(annot_dict[annot[-1]])
-                        self.classMatrix.append(1)
+                        self.classMatrix.append(annot_dict[annot[-1]])
+                        #self.classMatrix.append(1)
 
         for i in range(len(self.all_annots)-1):
             if self.all_annots[i][0]+CLASS_WIN/2-self.WIN/2 > 0 and \
