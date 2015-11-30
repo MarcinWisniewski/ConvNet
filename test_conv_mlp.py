@@ -28,7 +28,7 @@ def recognize_signal():
     n_kerns = [10, 15, 20]
     batch_size = 1
     rng = np.random.RandomState(23455)
-    f = open('model_v4.bin', 'rb')
+    f = open('model.bin', 'rb')
     cn_net = CNN(rng, x, n_kerns, batch_size)
     cn_net.__setstate__(cPickle.load(f))
     f.close()

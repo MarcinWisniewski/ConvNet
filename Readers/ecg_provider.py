@@ -114,7 +114,8 @@ class DataProvider(object):
         return self.inputMatrix[:self.divideIndex], self.classMatrix[:self.divideIndex]
 
     def getTestingSet(self):
-        return self.inputMatrix[self.divideIndex:self.divideIndexTestValid], self.classMatrix[self.divideIndex:self.divideIndexTestValid]
+        return self.inputMatrix[self.divideIndex:self.divideIndexTestValid], \
+               self.classMatrix[self.divideIndex:self.divideIndexTestValid]
 
     def getValidateSet(self):
         return self.inputMatrix[self.divideIndexTestValid:], self.classMatrix[self.divideIndexTestValid:]

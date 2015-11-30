@@ -1,18 +1,4 @@
-"""This tutorial introduces the LeNet5 neural network architecture
-using Theano.  LeNet5 is a convolutional neural network, good for
-classifying images. This tutorial shows how to build the architecture,
-and comes with all the hyper-parameters you need to reproduce the
-paper's MNIST results.
-
-
-This implementation simplifies the model in the following ways:
-
- - LeNetConvPool doesn't implement location-specific gain and bias parameters
- - LeNetConvPool doesn't implement pooling by average, it implements pooling
-   by max.
- - Digit classification is implemented with a logistic regression rather than
-   an RBF network
- - LeNet5 was not fully-connected convolutions at second layer
+"""This algorithm implements CNN for ECG analysis
 
 References:
  - Y. LeCun, L. Bottou, Y. Bengio and P. Haffner:
@@ -24,18 +10,16 @@ References:
 import os
 import sys
 import timeit
-import pickle as cPickle
-
 import numpy
 import theano
 import theano.tensor as T
-
+import pickle as cPickle
 from Readers.loading_processor import load_data
 from CNN.conv_network import CNN
 
 
-def evaluate_lenet5(learning_rate=0.1, n_epochs=10,
-                    n_kerns=[10, 15, 20], batch_size=1500):
+def evaluate_lenet5(learning_rate=0.1, n_epochs=20,
+                    n_kerns=(10, 15, 20), batch_size=1000):
     """ Demonstrates lenet on MNIST dataset
 
     :type learning_rate: float
@@ -46,18 +30,20 @@ def evaluate_lenet5(learning_rate=0.1, n_epochs=10,
     :param n_epochs: maximal number of epochs to run the optimizer
 
     :type dataset: string
-    :param dataset: path to the dataset used for training /testing (MNIST here)
+    :param dataset: path to the dataset used for training /testing (wfdb here)
 
     :type n_kerns: list of ints
     :param n_kerns: number of kernels on each layer
+
+    :type batch_size: int
+    :param batch_size: number of examples in minibatch
     """
 
     rng = numpy.random.RandomState(23455)
+    db_path = '/home/marcin/data/mitdb/'
+    records = ['100', '101', '103', '105', '106', '107', '100', '119', '232', '217']
 
-    #data_sets = load_data(file_name='data_3.bin', read_data=True)
-    db_path = os.path.join(os.path.sep, 'home', 'marcin', 'data', 'mitdb')
-    data_sets = load_data(db_path)
-
+    data_sets = load_data(db_path, records=records)
     train_set_x, train_set_y = data_sets[0]
     valid_set_x, valid_set_y = data_sets[1]
     test_set_x, test_set_y = data_sets[2]
@@ -72,7 +58,6 @@ def evaluate_lenet5(learning_rate=0.1, n_epochs=10,
     n_train_batches /= batch_size
     n_valid_batches /= batch_size
     n_test_batches /= batch_size
-
 
     # allocate symbolic variables for the data
     index = T.lscalar()  # index to a [mini]batch
@@ -136,9 +121,9 @@ def evaluate_lenet5(learning_rate=0.1, n_epochs=10,
     # TRAIN MODEL #
     ###############
 
-    #f = open('model_v2.bin', 'rb')
-    #cnn.__setstate__(cPickle.load(f))
-    #f.close()
+    f = open('model_v4.bin', 'rb')
+    cnn.__setstate__(cPickle.load(f))
+    f.close()
     print '... training'
     # early-stopping parameters
     patience = 1000  # look as this many examples regardless
@@ -211,7 +196,6 @@ def evaluate_lenet5(learning_rate=0.1, n_epochs=10,
                 done_looping = True
                 break
     end_time = timeit.default_timer()
-
 
     print('Optimization complete.')
     print('Best validation score of %f %% obtained at iteration %i, '

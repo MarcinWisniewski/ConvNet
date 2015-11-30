@@ -7,13 +7,45 @@ from ecg_provider import DataProvider
 import matplotlib.pyplot as plt
 import cPickle
 
+_ALL_RECORDS = ['100', '101', '103', '105', '106', '107',
+                 '108', '109', '111', '112', '113', '114',
+                 '115', '116', '117', '118', '119', '121',
+                 '122', '123', '124', '200', '201', '202',
+                 '203', '205', '207', '208', '209', '210',
+                 '212', '213', '214', '215', '217', '219',
+                 '220', '221', '222', '223', '228', '230',
+                 '231', '232', '233', '234']
 
-def load_data(db_path, file_name='data.bin', write_data=False, read_data=False):
+
+def load_data(db_path, file_name='data.bin', write_data=False, read_data=False, split_factor=85,
+              window=1024, start=0, stop=600, records=_ALL_RECORDS):
 
     ''' Loads the dataset
 
-    :type dataset: string
-    :param dataset: the path to the dataset (here MNIST)
+    :type db_path: string
+    :param db_path: the path to the dataset
+
+    :type file_name: string
+    :param file_name: the path to already read data stored in cPickle
+
+    :type write_data: bool
+    :param write_data: if true then write data to cPickle file
+
+    :type read_data: bool
+    :param read_data: if true then read data from cPickle file
+
+    :type split_factor: int
+    :param split_factor: percentage of split: train data / test and validadion data
+
+    :type window: int
+    :param window: size of feature vector
+
+    :type start: int
+    :param: start: start time in sec to wfdb reader
+
+    :type stop: int
+    :param: stop: stop time in sec to wfdb reader
+
     '''
 
     def shared_dataset(data_xy, borrow=True):
@@ -52,24 +84,14 @@ def load_data(db_path, file_name='data.bin', write_data=False, read_data=False):
         file_h.close()
     else:
         print '... loading data from datasets'
-        files = ['100', '101', '103', '105', '106', '107',
-                # '108', '109', '111', '112', '113', '114',
-                #'115', '116', '117', '118', '119', '121',
-                # '122', '123', '124', '200', '201', '202',
-                # '203', '205', '207', '208', '209', '210',
-                 #'212', '213', '214', '215', '217', '219',
-                 #'220', '221', '222', '223', '228', '230',
-                 '231', '232', '233', '234']
-        #files = ['100', '119']
-        #files = ['100']
 
         train_set = [[], []]
         valid_set = [[], []]
         test_set = [[], []]
-        for file in files:
-            print 'loading file: ', file
-            dp = DataProvider(os.path.join(db_path, file), split_factor=85,
-                              window=1024, start=0, stop=500)
+        for record in records:
+            print 'loading file: ', record
+            dp = DataProvider(os.path.join(db_path, record), split_factor=split_factor,
+                              window=window, start=start, stop=stop)
             dp.prepare_signal()
             dp.reshuffle_data()
             train_small_set = dp.getTrainingSet()
