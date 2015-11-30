@@ -4,7 +4,7 @@ import random as rn
 import numpy as np
 import timeit
 from WFDBTools.wfdb import rdann, rdsamp
-from scipy.signal import sosfilt, lfilter
+from scipy.signal import sosfilt
 #from scipy import signal as _signal
 import matplotlib.pyplot as plt
 
@@ -64,8 +64,9 @@ class DataProvider(object):
         self.organize_data()
         timer_stop = timeit.default_timer()
         print timer_stop - timer_start
-        self.divideIndex = int(len(self.inputMatrix)*(float(self.percentageSplit)/100))
-        self.divideIndexTestValid = int(len(self.inputMatrix)*(float(self.percentageSplitTestValid)/100))
+        self.divide_index = int(len(self.inputMatrix) * (float(self.percentageSplit) / 100))
+        self.divide_index_test_valid_data_set = int(len(self.inputMatrix) *
+                                                    (float(self.percentageSplitTestValid) / 100))
 
     def organize_data(self):
         def normalyse(frame):
@@ -112,14 +113,14 @@ class DataProvider(object):
         self.inputMatrix = tempMtx[:]
 
     def getTrainingSet(self):
-        return self.inputMatrix[:self.divideIndex], self.classMatrix[:self.divideIndex]
+        return self.inputMatrix[:self.divide_index], self.classMatrix[:self.divide_index]
 
     def getTestingSet(self):
-        return self.inputMatrix[self.divideIndex:self.divideIndexTestValid], \
-               self.classMatrix[self.divideIndex:self.divideIndexTestValid]
+        return self.inputMatrix[self.divide_index:self.divide_index_test_valid_data_set], \
+               self.classMatrix[self.divide_index:self.divide_index_test_valid_data_set]
 
     def getValidateSet(self):
-        return self.inputMatrix[self.divideIndexTestValid:], self.classMatrix[self.divideIndexTestValid:]
+        return self.inputMatrix[self.divide_index_test_valid_data_set:], self.classMatrix[self.divide_index_test_valid_data_set:]
 
 
 if __name__ == '__main__':
