@@ -10,7 +10,7 @@ from Readers.loading_processor import load_data
 from CNN.conv_network import CNN
 
 
-def evaluate_ecg_net(learning_rate=0.01, momentum=0.9, n_epochs=20,
+def evaluate_ecg_net(learning_rate=0.001, momentum=0.9, n_epochs=20,
                     n_kerns=(24, 16, 16, 16, 16), batch_size=256, use_model=True):
     """ Demonstrates lenet on MNIST dataset
 
@@ -63,6 +63,7 @@ def evaluate_ecg_net(learning_rate=0.01, momentum=0.9, n_epochs=20,
     ######################
     print '... building the model'
     cnn = CNN(x, n_kerns, batch_size)
+    print 'CNN with %i parameters' % lasagne.layers.count_params(cnn.network)
     prediction = lasagne.layers.get_output(cnn.network)
     # the cost we minimize during training is the NLL of the model
     loss = lasagne.objectives.squared_error(prediction, y)
@@ -195,5 +196,5 @@ def evaluate_ecg_net(learning_rate=0.01, momentum=0.9, n_epochs=20,
                           ' ran for %.2fm' % ((end_time - start_time) / 60.))
 
 if __name__ == '__main__':
-    evaluate_ecg_net(use_model=False)
+    evaluate_ecg_net(use_model=True)
 
