@@ -63,7 +63,7 @@ def load_data(db_path, file_name='data.bin', write_data=False, read_data=False, 
                                                dtype=theano.config.floatX),
                                  borrow=borrow)
         shared_y = theano.shared(numpy.asarray(data_y,
-                                               dtype='int32'),
+                                               dtype=theano.config.floatX),
                                  borrow=borrow)
         # When storing data on the GPU it has to be stored as floats
         # therefore we will store the labels as ``floatX`` as well
@@ -91,7 +91,7 @@ def load_data(db_path, file_name='data.bin', write_data=False, read_data=False, 
         for record in records:
             print 'loading file: ', record
             dp = DataProvider(os.path.join(db_path, record), split_factor=split_factor,
-                              window=window, start=start, stop=stop)
+                              window=window, step=64, start=start, stop=stop)
             dp.prepare_signal()
             dp.reshuffle_data()
             train_small_set = dp.getTrainingSet()

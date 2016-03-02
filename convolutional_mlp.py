@@ -1,16 +1,8 @@
-"""This algorithm implements CNN for ECG analysis
-
-References:
- - Y. LeCun, L. Bottou, Y. Bengio and P. Haffner:
-   Gradient-Based Learning Applied to Document
-   Recognition, Proceedings of the IEEE, 86(11):2278-2324, November 1998.
-   http://yann.lecun.com/exdb/publis/pdf/lecun-98.pdf
-
-"""
 import os
 import sys
 import timeit
 import numpy
+import lasagne
 import theano
 import theano.tensor as T
 import pickle as cPickle
@@ -18,8 +10,8 @@ from Readers.loading_processor import load_data
 from CNN.conv_network import CNN
 
 
-def evaluate_lenet5(learning_rate=0.1, n_epochs=20,
-                    n_kerns=(10, 15, 20), batch_size=1000):
+def evaluate_ecg_net(learning_rate=0.01, momentum=0.9, n_epochs=20,
+                    n_kerns=(24, 16, 16, 16, 16), batch_size=256, use_model=True):
     """ Demonstrates lenet on MNIST dataset
 
     :type learning_rate: float
@@ -41,9 +33,9 @@ def evaluate_lenet5(learning_rate=0.1, n_epochs=20,
 
     rng = numpy.random.RandomState(23455)
     db_path = '/home/marcin/data/mitdb/'
-    records = ['100', '101', '103', '105', '106', '107', '100', '119', '232', '217']
+    records = ['100', '101', '103', '100', '119', '232', '217']
 
-    data_sets = load_data(db_path, records=records)
+    data_sets = load_data(db_path, stop=1400)
     train_set_x, train_set_y = data_sets[0]
     valid_set_x, valid_set_y = data_sets[1]
     test_set_x, test_set_y = data_sets[2]
@@ -63,22 +55,33 @@ def evaluate_lenet5(learning_rate=0.1, n_epochs=20,
     index = T.lscalar()  # index to a [mini]batch
 
     # start-snippet-1
-    x = T.matrix('x')   # the data is presented as rasterized images
-    y = T.ivector('y')  # the labels are presented as 1D vector of
-                        # [int] labels
+    x = T.matrix('x', dtype=theano.config.floatX)   # the data is presented as rasterized images
+    y = T.matrix('y', dtype=theano.config.floatX)   # the target is a 2D matrix with at most 10 normalised indexes of qrs
 
     ######################
     # BUILD ACTUAL MODEL #
     ######################
     print '... building the model'
-    cnn = CNN(rng, x, n_kerns, batch_size)
+    cnn = CNN(x, n_kerns, batch_size)
+    prediction = lasagne.layers.get_output(cnn.network)
     # the cost we minimize during training is the NLL of the model
-    cost = cnn.layer4.negative_log_likelihood(y)
+    loss = lasagne.objectives.squared_error(prediction, y)
+    loss = loss.mean()
+
+    parameters = lasagne.layers.get_all_params(cnn.network, trainable=True)
+    updates = lasagne.updates.nesterov_momentum(loss, parameters,
+                                                learning_rate=learning_rate,
+                                                momentum=momentum)
+
+    test_prediction = lasagne.layers.get_output(cnn.network, deterministic=True)
+    test_loss = lasagne.objectives.squared_error(test_prediction, y)
+    test_loss = test_loss.mean()
+    # As a bonus, also create an expression for the classification accuracy:
 
     # create a function to compute the mistakes that are made by the model
     test_model = theano.function(
         [index],
-        cnn.errors(y),
+        [test_loss],
         givens={
             x: test_set_x[index * batch_size: (index + 1) * batch_size],
             y: test_set_y[index * batch_size: (index + 1) * batch_size]
@@ -87,43 +90,31 @@ def evaluate_lenet5(learning_rate=0.1, n_epochs=20,
 
     validate_model = theano.function(
         [index],
-        cnn.errors(y),
+        [test_loss],
         givens={
             x: valid_set_x[index * batch_size: (index + 1) * batch_size],
             y: valid_set_y[index * batch_size: (index + 1) * batch_size]
         }
     )
 
-    # create a list of gradients for all model parameters
-    grads = T.grad(cost, cnn.params)
-
-    # train_model is a function that updates the model parameters by
-    # SGD Since this model has many parameters, it would be tedious to
-    # manually create an update rule for each model parameter. We thus
-    # create the updates list by automatically looping over all
-    # (params[i], grads[i]) pairs.
-    updates = [
-        (param_i, param_i - learning_rate * grad_i)
-        for param_i, grad_i in zip(cnn.params, grads)
-    ]
-
     train_model = theano.function(
         [index],
-        cost,
+        loss,
         updates=updates,
         givens={
             x: train_set_x[index * batch_size: (index + 1) * batch_size],
             y: train_set_y[index * batch_size: (index + 1) * batch_size]
         }
     )
-
     ###############
     # TRAIN MODEL #
     ###############
 
-    f = open('model_v4.bin', 'rb')
-    cnn.__setstate__(cPickle.load(f))
-    f.close()
+    if use_model:
+        f = open('model.bin', 'rb')
+        cnn.__setstate__(cPickle.load(f))
+        f.close()
+
     print '... training'
     # early-stopping parameters
     patience = 1000  # look as this many examples regardless
@@ -144,13 +135,14 @@ def evaluate_lenet5(learning_rate=0.1, n_epochs=20,
 
     epoch = 0
     done_looping = False
-    best_cnn = CNN(rng, x, n_kerns, batch_size)
-
+    best_cnn = CNN(x, n_kerns, batch_size)
+    print 'valid frequency - %i iterations' % validation_frequency
+    print 'number of epochs - %i ' % n_epochs
     while (epoch < n_epochs) and (not done_looping):
         epoch += 1
         for minibatch_index in xrange(n_train_batches):
             iter = (epoch - 1) * n_train_batches + minibatch_index
-            if iter % 100 == 0:
+            if iter % 10 == 0:
                 print 'training @ iter = ', iter
             cost_ij = train_model(minibatch_index)
 
@@ -192,9 +184,6 @@ def evaluate_lenet5(learning_rate=0.1, n_epochs=20,
                     cPickle.dump(best_cnn.__getstate__(), f, protocol=cPickle.HIGHEST_PROTOCOL)
                     f.close()
 
-            if patience <= iter:
-                done_looping = True
-                break
     end_time = timeit.default_timer()
 
     print('Optimization complete.')
@@ -206,5 +195,5 @@ def evaluate_lenet5(learning_rate=0.1, n_epochs=20,
                           ' ran for %.2fm' % ((end_time - start_time) / 60.))
 
 if __name__ == '__main__':
-    evaluate_lenet5()
+    evaluate_ecg_net(use_model=False)
 
