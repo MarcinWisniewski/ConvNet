@@ -15,20 +15,21 @@ from Readers.ecg_provider import DataProvider
 from WFDBTools.wfdb_wrann import wrann
 import cProfile
 
-N_KERNS = (6, 6, 12, 12, 10)
+N_KERNS = (24, 16, 16, 16, 16)
 # dict from class to wfdb code
 annotation_dict = {0: 0, 1: 1, 2: 5, 3: 9}
 db_path = '/home/marcin/data/mitdb'
 
 files = os.listdir(db_path)
 files = [record.split('.')[0] for record in files if record.split('.')[-1] == 'dat']
+SHOW_FRAME = False
 
 
 def recognize_signal():
-    x = T.matrix('x', dtype=theano.config.floatX)
+    x = T.vector('x', dtype=theano.config.floatX)
     batch_size = 1
     rng = np.random.RandomState(23455)
-    f = open('model.bin', 'rb')
+    f = open('qrs_model.bin', 'rb')
     cn_net = CNN(x, N_KERNS, batch_size)
     cn_net.__setstate__(cPickle.load(f))
     f.close()
@@ -42,21 +43,19 @@ def recognize_signal():
         dp.prepare_signal()
         signal = dp.signal
         inputMatrix = dp.inputMatrix
-        #reference_annots = dp.annots
         print 'signal length', len(signal)
         get_r_peaks = theano.function([x], test_prediction)
-        start_position = 0
-        end_position = len(signal)
+        annot_list = []
         for index_of_frame in xrange(len(inputMatrix)):
-            input_matrix = np.expand_dims(inputMatrix[index_of_frame], 0)
+            input_matrix = np.asarray(inputMatrix[index_of_frame], dtype=theano.config.floatX)
             indexes = get_r_peaks(input_matrix)
             indexes *= window
-            indexes += index_of_frame*window  #window/skip
-
-
-
-
-
+            if SHOW_FRAME:
+                plt.plot(input_matrix)
+                plt.plot(indexes, np.ones(len(indexes)), 'ro')
+                indexes += index_of_frame*window  #window/skip
+                plt.close()
+            [annot_list.append((round(index+index_of_frame*window), 1)) for index in indexes[0] if index > 0]
 
         print 'saving annot file'
         wrann(annot_list, file_path +'.tan')

@@ -112,7 +112,7 @@ def evaluate_ecg_net(learning_rate=0.001, momentum=0.9, n_epochs=20,
     ###############
 
     if use_model:
-        f = open('model.bin', 'rb')
+        f = open('qrs_model.bin', 'rb')
         cnn.__setstate__(cPickle.load(f))
         f.close()
 
@@ -181,7 +181,7 @@ def evaluate_ecg_net(learning_rate=0.001, momentum=0.9, n_epochs=20,
 
                     best_weights = cnn.__getstate__()
                     best_cnn.__setstate__(best_weights)
-                    f = open('model.bin', 'wb')
+                    f = open('qrs_model.bin', 'wb')
                     cPickle.dump(best_cnn.__getstate__(), f, protocol=cPickle.HIGHEST_PROTOCOL)
                     f.close()
 
