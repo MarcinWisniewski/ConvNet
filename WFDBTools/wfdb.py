@@ -180,6 +180,7 @@ def rdsamp(record, start=0, end=-1, interval=-1):
     data = _read_data(record, start, end, info)
     return data, info
 
+
 def rdann(record, annotator, start=0, end=-1, types=[]):
     """
     Reads annotations for given record by specified annotator.
@@ -374,7 +375,7 @@ def rdhdr(record):
     info['samp_freq'] = float(samp_freq)
     info['samp_count'] = int(samp_count)
 
-    for sig in range(2):
+    for sig in range(len(header_lines)-1):
         (file_name, file_format, samp_per_frame, skew,
          byte_offset, gain, baseline, units,
          resolution, zero_value, first_value,
@@ -398,6 +399,7 @@ def rdhdr(record):
         info['signal_names'].append(signal_name)
 
     return info
+
 
 def _getheaderlines(record):
     """Read the header file and separate comment lines
@@ -454,6 +456,7 @@ def _get_read_limits(start, end, interval, info):
     end = min(end, interval_end, info['samp_count']) # use earlier end
     return int(start), int(end)
 
+
 def _read_data(record, start, end, info):
     """Read the binary data for each signal"""
     datfile = record + '.dat'
@@ -461,30 +464,40 @@ def _read_data(record, start, end, info):
 
     # verify against first value in header
     with open(datfile, 'rb') as f:
-        data = _arr_to_data(numpy.fromstring(f.read(3),
-                        dtype=numpy.uint8).reshape(1,3))
+        if info['samp_freq'] == 360:
+            data = _arr_to_data(numpy.fromstring(f.read(3),
+                                                 dtype=numpy.uint8).reshape(1, 3))
+        else:
+            data = _arr_to_data16b(numpy.fromstring(f.read(24),
+                                                    dtype=numpy.uint8).reshape(1, 24))
 
-    if [data[0, 2], data[0, 3]] != info['first_values']:
+    if [data[0, 2], data[0, 3]] != info['first_values'][2:3]:
         warnings.warn(
             'First value from dat file does not match value in header')
 
     # read into an array with 3 bytes in each row
     with open(datfile, 'rb') as f:
-        f.seek(start*3)
-        arr = numpy.fromstring(f.read(3*samp_to_read),
-                dtype=numpy.uint8).reshape((samp_to_read, 3))
+        if info['samp_freq'] == 360:
+            f.seek(start*24)
+            arr = numpy.fromstring(f.read(3*samp_to_read),
+                                   dtype=numpy.uint8).reshape((samp_to_read, 3))
+            data = _arr_to_data(arr)
 
-    data = _arr_to_data(arr)
+        else:
+            f.seek(start*24)
+            arr = numpy.fromstring(f.read(24*samp_to_read),
+                                   dtype=numpy.uint8).reshape(samp_to_read, 24)
+            data = _arr_to_data16b(arr)
 
     # adjust zerovalue and gain
-    data[:, 2] = (data[:, 2] - info['zero_values'][0]) / info['gains'][0]
-    data[:, 3] = (data[:, 3] - info['zero_values'][1]) / info['gains'][1]
+    data[:, 2:] = (data[:, 2:] - info['zero_values']) / info['gains']
 
     # time columns
     data[:, 0] = numpy.arange(start, end)  # elapsed time in samples
     data[:, 1] = (numpy.arange(samp_to_read) + start
                   ) / info['samp_freq'] # in sec
     return data
+
 
 def _arr_to_data(arr):
     """From the numpy array read from the dat file
@@ -499,6 +512,18 @@ def _arr_to_data(arr):
     data[:, 2] = (bytes1 << 8) + arr[:, 0] - sign1
     data[:, 3] = (bytes2 << 8) + arr[:, 2] - sign2
     return data
+
+
+def _arr_to_data16b(arr):
+    data = numpy.zeros((arr.shape[0], 14), dtype='float')
+    for i in xrange(12):
+        column = arr[:, 2*i+1].astype('int')
+        sign = (column & int('0b10000000', 2)) << 8
+        MSB = (column &  int('0b01111111', 2)) << 8
+        data[:, i+2] =((MSB + arr[:, 2*i]) - sign)
+    return data
+
+
 
 def get_annotation_code(code=None):
     """Returns the symbolic definition for the wfdb annotation code.

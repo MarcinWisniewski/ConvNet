@@ -8,31 +8,30 @@ class CNN(object):
         assert len(n_kerns) == 5
         self.input_signal_length = 1024
         self.layer0_input = input
-        self.layer0_input = input.reshape((batch_size, 1, self.input_signal_length))
-        self.network = lasagne.layers.InputLayer(shape=(None, 1, self.input_signal_length),
+        self.network = lasagne.layers.InputLayer(shape=(None, 1, 3, self.input_signal_length),
                                                  input_var=self.layer0_input)
 
-        self.network = lasagne.layers.Conv1DLayer(incoming=self.network, num_filters=n_kerns[0],
-                                                  filter_size=71, pad='same',
+        self.network = lasagne.layers.Conv2DLayer(incoming=self.network, num_filters=n_kerns[0],
+                                                  filter_size=(1, 5), pad='same', stride=(1, 2),
                                                   nonlinearity=lasagne.nonlinearities.identity)
-        self.network = lasagne.layers.MaxPool1DLayer(self.network, pool_size=2)
+        self.network = lasagne.layers.MaxPool2DLayer(self.network, pool_size=(1, 2))
 
-        self.network = lasagne.layers.Conv1DLayer(incoming=self.network, num_filters=n_kerns[1],
-                                                  filter_size=71, pad='same',
+        self.network = lasagne.layers.Conv2DLayer(incoming=self.network, num_filters=n_kerns[1],
+                                                  filter_size=(1, 3), pad='same',
                                                   nonlinearity=lasagne.nonlinearities.identity)
-        self.network = lasagne.layers.MaxPool1DLayer(self.network, pool_size=2)
+        self.network = lasagne.layers.MaxPool2DLayer(self.network, pool_size=(1, 2))
 
-        self.network = lasagne.layers.Conv1DLayer(incoming=self.network, num_filters=n_kerns[2],
-                                                  filter_size=35, pad='same',
+        self.network = lasagne.layers.Conv2DLayer(incoming=self.network, num_filters=n_kerns[2],
+                                                  filter_size=(1, 3), pad='same',
                                                   nonlinearity=lasagne.nonlinearities.identity)
-        self.network = lasagne.layers.MaxPool1DLayer(self.network, pool_size=2)
+        self.network = lasagne.layers.MaxPool2DLayer(self.network, pool_size=(1, 2))
 
-        self.network = lasagne.layers.Conv1DLayer(incoming=self.network, num_filters=n_kerns[3],
-                                                  filter_size=35, pad='same',
+        self.network = lasagne.layers.Conv2DLayer(incoming=self.network, num_filters=n_kerns[3],
+                                                  filter_size=(1, 3), pad='same',
                                                   nonlinearity=lasagne.nonlinearities.identity)
 
-        self.network = lasagne.layers.Conv1DLayer(incoming=self.network, num_filters=n_kerns[4],
-                                                  filter_size=35, pad='same',
+        self.network = lasagne.layers.Conv2DLayer(incoming=self.network, num_filters=n_kerns[4],
+                                                  filter_size=(1, 3), pad='same',
                                                   nonlinearity=lasagne.nonlinearities.identity)
 
         self.network = lasagne.layers.DenseLayer(lasagne.layers.dropout(self.network, p=.5),

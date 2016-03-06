@@ -15,7 +15,7 @@ from Readers.ecg_provider import DataProvider
 from WFDBTools.wfdb_wrann import wrann
 import cProfile
 
-N_KERNS = (24, 16, 16, 16, 16)
+N_KERNS = (32, 32, 32, 32, 32)
 # dict from class to wfdb code
 annotation_dict = {0: 0, 1: 1, 2: 5, 3: 9}
 db_path = '/home/marcin/data/mitdb'

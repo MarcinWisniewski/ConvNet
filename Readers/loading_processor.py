@@ -7,18 +7,11 @@ from ecg_provider import DataProvider
 import matplotlib.pyplot as plt
 import cPickle
 
-_ALL_RECORDS = ['100', '101', '103', '105', '106', '107',
-                 '108', '109', '111', '112', '113', '114',
-                 '115', '116', '117', '118', '119', '121',
-                 '122', '123', '124', '200', '201', '202',
-                 '203', '205', '207', '208', '209', '210',
-                 '212', '213', '214', '215', '217', '219',
-                 '220', '221', '222', '223', '228', '230',
-                 '231', '232', '233', '234']
+DATA_BASES = ['mitdb', 'incartdb']
 
 
-def load_data(db_path, file_name='data.bin', write_data=False, read_data=False, split_factor=85,
-              window=1024, start=0, stop=600, records=_ALL_RECORDS):
+def load_data(db_path, data_bases=None, split_factor=85,
+              window=1024, step=1024, start=0, stop=600):
 
     ''' Loads the dataset
 
@@ -59,8 +52,9 @@ def load_data(db_path, file_name='data.bin', write_data=False, read_data=False, 
         variable) would lead to a large decrease in performance.
         """
         data_x, data_y = data_xy
-        shared_x = theano.shared(numpy.asarray(data_x,
-                                               dtype=theano.config.floatX),
+        data_x = numpy.asarray(data_x, dtype=theano.config.floatX)
+        data_x = numpy.expand_dims(data_x, axis=1)
+        shared_x = theano.shared(data_x,
                                  borrow=borrow)
         shared_y = theano.shared(numpy.asarray(data_y,
                                                dtype=theano.config.floatX),
@@ -77,48 +71,44 @@ def load_data(db_path, file_name='data.bin', write_data=False, read_data=False, 
     #############
     # LOAD DATA #
     #############
-    if read_data:
-        print "...reading data from: ", file_name
-        file_h = open(file_name, 'rb')
-        test_set, valid_set, train_set = cPickle.load(file_h)
-        file_h.close()
-    else:
-        print '... loading data from datasets'
 
-        train_set = [[], []]
-        valid_set = [[], []]
-        test_set = [[], []]
+    print '... loading data from datasets'
+
+    train_set = [[], []]
+    valid_set = [[], []]
+    test_set = [[], []]
+
+    if data_bases is None:
+        data_bases = DATA_BASES
+    for data_base in data_bases:
+        data_base_path = os.path.join(db_path, data_base)
+        records = os.listdir(data_base_path)
         for record in records:
-            print 'loading file: ', record
-            dp = DataProvider(os.path.join(db_path, record), split_factor=split_factor,
-                              window=window, step=64, start=start, stop=stop)
-            dp.prepare_signal()
-            dp.reshuffle_data()
-            train_small_set = dp.getTrainingSet()
-            train_set[0] += train_small_set[0]
-            train_set[1] += train_small_set[1]
+            if record.endswith('.dat'):
+                print 'loading file: ', record
+                record = record.split('.')[0]
+                dp = DataProvider(os.path.join(data_base_path, record), split_factor=split_factor,
+                                  window=window, step=step, start=start, stop=stop)
+                dp.prepare_signal()
+                dp.reshuffle_data()
+                train_small_set = dp.getTrainingSet()
+                train_set[0] += train_small_set[0]
+                train_set[1] += train_small_set[1]
 
-            valid_small_set = dp.getValidateSet()
-            valid_set[0] += valid_small_set[0]
-            valid_set[1] += valid_small_set[1]
+                valid_small_set = dp.getValidateSet()
+                valid_set[0] += valid_small_set[0]
+                valid_set[1] += valid_small_set[1]
 
-            test_small_set = dp.getTestingSet()
-            test_set[0] += test_small_set[0]
-            test_set[1] += test_small_set[1]
+                test_small_set = dp.getTestingSet()
+                test_set[0] += test_small_set[0]
+                test_set[1] += test_small_set[1]
 
-    if write_data:
-        print '...saving data to: ', file_name
-        file_h = open(file_name, 'wb')
-        cPickle.dump((test_set, valid_set, train_set), file_h, protocol=cPickle.HIGHEST_PROTOCOL)
-        file_h.close()
-        print 'Done!!'
-    else:
-        test_set_x, test_set_y = shared_dataset(test_set)
-        valid_set_x, valid_set_y = shared_dataset(valid_set)
-        train_set_x, train_set_y = shared_dataset(train_set)
-        rval = [(train_set_x, train_set_y), (valid_set_x, valid_set_y),
-                (test_set_x, test_set_y)]
-        return rval
+    test_set_x, test_set_y = shared_dataset(test_set)
+    valid_set_x, valid_set_y = shared_dataset(valid_set)
+    train_set_x, train_set_y = shared_dataset(train_set)
+    rval = [(train_set_x, train_set_y), (valid_set_x, valid_set_y),
+            (test_set_x, test_set_y)]
+    return rval
 
 if __name__ == '__main__':
-    load_data(file_name='data_3.bin', write_data=True)
+    load_data('/home/marcin/data/', data_bases=['mitdb', 'incartdb'], stop=1000)

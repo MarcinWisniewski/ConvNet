@@ -10,8 +10,8 @@ from Readers.loading_processor import load_data
 from CNN.conv_network import CNN
 
 
-def evaluate_ecg_net(learning_rate=0.001, momentum=0.9, n_epochs=20,
-                    n_kerns=(24, 16, 16, 16, 16), batch_size=256, use_model=True):
+def evaluate_ecg_net(learning_rate=0.01, momentum=0.9, n_epochs=20,
+                    n_kerns=(32, 32, 32, 32, 32), batch_size=256, use_model=True):
     """ Demonstrates lenet on MNIST dataset
 
     :type learning_rate: float
@@ -32,10 +32,10 @@ def evaluate_ecg_net(learning_rate=0.001, momentum=0.9, n_epochs=20,
     """
 
     rng = numpy.random.RandomState(23455)
-    db_path = '/home/marcin/data/mitdb/'
-    records = ['100', '101', '103', '100', '119', '232', '217']
-
-    data_sets = load_data(db_path, stop=1400)
+    db_path = '/home/marcin/data/'
+    data_sets = load_data(db_path, split_factor=90,
+                          window=1024, step=256,
+                          start=0, stop=1400)
     train_set_x, train_set_y = data_sets[0]
     valid_set_x, valid_set_y = data_sets[1]
     test_set_x, test_set_y = data_sets[2]
@@ -55,7 +55,7 @@ def evaluate_ecg_net(learning_rate=0.001, momentum=0.9, n_epochs=20,
     index = T.lscalar()  # index to a [mini]batch
 
     # start-snippet-1
-    x = T.matrix('x', dtype=theano.config.floatX)   # the data is presented as rasterized images
+    x = T.tensor4('x', dtype=theano.config.floatX)    # the data is presented as rasterized images
     y = T.matrix('y', dtype=theano.config.floatX)   # the target is a 2D matrix with at most 10 normalised indexes of qrs
 
     ######################
@@ -196,5 +196,5 @@ def evaluate_ecg_net(learning_rate=0.001, momentum=0.9, n_epochs=20,
                           ' ran for %.2fm' % ((end_time - start_time) / 60.))
 
 if __name__ == '__main__':
-    evaluate_ecg_net(use_model=True)
+    evaluate_ecg_net(use_model=False)
 
