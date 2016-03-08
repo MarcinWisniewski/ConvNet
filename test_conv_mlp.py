@@ -57,7 +57,7 @@ def recognize_signal():
             for mini_batch_index in xrange(batch_size):
                 if SHOW_FRAME:
                     plt.plot(input_matrix[mini_batch_index][0][0])
-                    plt.plot(indexes[mini_batch_index][], np.ones(len(indexes)), 'ro')
+                    plt.plot(indexes[mini_batch_index][:], np.ones(len(indexes)), 'ro')
                     plt.close()
 
                 indexes[mini_batch_index] += (index_of_frame+mini_batch_index)*window  #window/skip
