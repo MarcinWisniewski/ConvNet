@@ -26,8 +26,8 @@ SHOW_FRAME = False
 
 
 def recognize_signal():
-    x = T.vector('x', dtype=theano.config.floatX)
-    batch_size = 1
+    x = T.tensor4('x', dtype=theano.config.floatX)    # the data is presented as rasterized images
+    batch_size = 128
     rng = np.random.RandomState(23455)
     f = open('qrs_model.bin', 'rb')
     cn_net = CNN(x, N_KERNS, batch_size)
@@ -35,30 +35,38 @@ def recognize_signal():
     f.close()
     test_prediction = lasagne.layers.get_output(cn_net.network, deterministic=True)
     window = 1024
+    dp = DataProvider(db_path, split_factor=100,
+                      window=window, step=window,
+                      number_of_channel_to_analyse=1,
+                      channels_to_analyse=[0])
+    get_r_peaks = theano.function([x], test_prediction)
     for record in files:
         print '...analysing record', record
         total_time = timeit.default_timer()
-        file_path = os.path.join(db_path, record)
-        dp = DataProvider(file_path, split_factor=100, window=window, step=window)
-        dp.prepare_signal()
+        dp.prepare_signal(record)
         signal = dp.signal
-        inputMatrix = dp.inputMatrix
+        feature_matrix = dp.feature_matrix
         print 'signal length', len(signal)
-        get_r_peaks = theano.function([x], test_prediction)
         annot_list = []
-        for index_of_frame in xrange(len(inputMatrix)):
-            input_matrix = np.asarray(inputMatrix[index_of_frame], dtype=theano.config.floatX)
+        for index_of_frame in xrange(0, len(feature_matrix)-batch_size, batch_size):
+            input_matrix = np.asarray(feature_matrix[index_of_frame:index_of_frame+batch_size],
+                                      dtype=theano.config.floatX)
+            input_matrix = np.expand_dims(input_matrix, 1)
             indexes = get_r_peaks(input_matrix)
             indexes *= window
-            if SHOW_FRAME:
-                plt.plot(input_matrix)
-                plt.plot(indexes, np.ones(len(indexes)), 'ro')
-                indexes += index_of_frame*window  #window/skip
-                plt.close()
+            for mini_batch_index in xrange(batch_size):
+                if SHOW_FRAME:
+                    plt.plot(input_matrix[mini_batch_index][0][0])
+                    plt.plot(indexes[mini_batch_index][], np.ones(len(indexes)), 'ro')
+                    plt.close()
+
+                indexes[mini_batch_index] += (index_of_frame+mini_batch_index)*window  #window/skip
+
             [annot_list.append((round(index+index_of_frame*window), 1)) for index in indexes[0] if index > 0]
 
         print 'saving annot file'
-        wrann(annot_list, file_path +'.tan')
+        file_path = os.path.join(db_path, record)
+        wrann(annot_list, file_path + '.tan')
         print timeit.default_timer() - total_time
 
 

@@ -2,7 +2,7 @@ __author__ = 'MW'
 
 import os
 import theano
-import numpy
+import numpy as np
 from ecg_provider import DataProvider
 import matplotlib.pyplot as plt
 import cPickle
@@ -10,38 +10,55 @@ import cPickle
 DATA_BASES = ['mitdb', 'incartdb']
 
 
-def load_data(db_path, data_bases=None, split_factor=85,
-              window=1024, step=1024, start=0, stop=600):
+class DataLoader(object):
+    def __init__(self, db_path, data_bases=None, split_factor=85,
+                  window=1024, step=1024, start=0, stop=600):
 
-    ''' Loads the dataset
+        ''' Loads the dataset
 
-    :type db_path: string
-    :param db_path: the path to the dataset
+        :type db_path: string
+        :param db_path: the path to the dataset
 
-    :type file_name: string
-    :param file_name: the path to already read data stored in cPickle
+        :type file_name: string
+        :param file_name: the path to already read data stored in cPickle
 
-    :type write_data: bool
-    :param write_data: if true then write data to cPickle file
+        :type write_data: bool
+        :param write_data: if true then write data to cPickle file
 
-    :type read_data: bool
-    :param read_data: if true then read data from cPickle file
+        :type read_data: bool
+        :param read_data: if true then read data from cPickle file
 
-    :type split_factor: int
-    :param split_factor: percentage of split: train data / test and validadion data
+        :type split_factor: int
+        :param split_factor: percentage of split: train data / test and validadion data
 
-    :type window: int
-    :param window: size of feature vector
+        :type window: int
+        :param window: size of feature vector
 
-    :type start: int
-    :param: start: start time in sec to wfdb reader
+        :type start: int
+        :param: start: start time in sec to wfdb reader
 
-    :type stop: int
-    :param: stop: stop time in sec to wfdb reader
+        :type stop: int
+        :param: stop: stop time in sec to wfdb reader
 
-    '''
+        '''
 
-    def shared_dataset(data_xy, borrow=True):
+        self.rnd_gen = np.random.seed(2345667)
+        self.db_path = db_path
+        if data_bases is None:
+            self.data_bases = DATA_BASES
+        else:
+            self.data_bases = data_bases
+        self.window = window
+        self.split_factor = split_factor
+        self.step = step
+        self.start = start
+        self.stop = stop
+
+        self.train_set = [[], []]
+        self.valid_set = [[], []]
+        self.test_set = [[], []]
+
+    def shared_dataset(self, data_xy, borrow=True):
 
         """ Function that loads the dataset into shared variables
 
@@ -52,11 +69,12 @@ def load_data(db_path, data_bases=None, split_factor=85,
         variable) would lead to a large decrease in performance.
         """
         data_x, data_y = data_xy
-        data_x = numpy.asarray(data_x, dtype=theano.config.floatX)
-        data_x = numpy.expand_dims(data_x, axis=1)
+        data_x = np.asarray(data_x.tolist(), dtype=theano.config.floatX)
+
+        data_x = np.expand_dims(data_x, axis=1)
         shared_x = theano.shared(data_x,
                                  borrow=borrow)
-        shared_y = theano.shared(numpy.asarray(data_y,
+        shared_y = theano.shared(np.asarray(data_y.tolist(),
                                                dtype=theano.config.floatX),
                                  borrow=borrow)
         # When storing data on the GPU it has to be stored as floats
@@ -68,47 +86,56 @@ def load_data(db_path, data_bases=None, split_factor=85,
         # lets ous get around this issue
         return shared_x, shared_y
 
-    #############
-    # LOAD DATA #
-    #############
+    def load_data(self):
+        #############
+        # LOAD DATA #
+        #############
+        print '... loading data from datasets'
+        for data_base in self.data_bases:
+            data_base_path = os.path.join(self.db_path, data_base)
+            records = [record for record in os.listdir(data_base_path) if record.endswith('.dat')]
+            dp = DataProvider(data_base_path, split_factor=self.split_factor,
+                              window=self.window, step=self.step, start=self.start, stop=self.stop,
+                              number_of_channel_to_analyse=1, channels_to_analyse=[1])
+            for record in records:
+                if record.endswith('.dat'):
+                    print 'loading file: ', record
+                    record = record.split('.')[0]
+                    dp.prepare_signal(record)
+                    train_small_set = dp.get_training_set()
+                    self.train_set[0] += train_small_set[0]
+                    self.train_set[1] += train_small_set[1]
 
-    print '... loading data from datasets'
+                    valid_small_set = dp.get_validate_set()
+                    self.valid_set[0] += valid_small_set[0]
+                    self.valid_set[1] += valid_small_set[1]
 
-    train_set = [[], []]
-    valid_set = [[], []]
-    test_set = [[], []]
+                    test_small_set = dp.get_testing_set()
+                    self.test_set[0] += test_small_set[0]
+                    self.test_set[1] += test_small_set[1]
 
-    if data_bases is None:
-        data_bases = DATA_BASES
-    for data_base in data_bases:
-        data_base_path = os.path.join(db_path, data_base)
-        records = os.listdir(data_base_path)
-        for record in records:
-            if record.endswith('.dat'):
-                print 'loading file: ', record
-                record = record.split('.')[0]
-                dp = DataProvider(os.path.join(data_base_path, record), split_factor=split_factor,
-                                  window=window, step=step, start=start, stop=stop)
-                dp.prepare_signal()
-                dp.reshuffle_data()
-                train_small_set = dp.getTrainingSet()
-                train_set[0] += train_small_set[0]
-                train_set[1] += train_small_set[1]
+        self._reshuffle_data()
+        test_set_x, test_set_y = self.shared_dataset(self.test_set)
+        valid_set_x, valid_set_y = self.shared_dataset(self.valid_set)
+        train_set_x, train_set_y = self.shared_dataset(self.train_set)
+        rval = [(train_set_x, train_set_y), (valid_set_x, valid_set_y),
+                (test_set_x, test_set_y)]
+        return rval
 
-                valid_small_set = dp.getValidateSet()
-                valid_set[0] += valid_small_set[0]
-                valid_set[1] += valid_small_set[1]
+    def _reshuffle_data(self):
+        temp = np.transpose(self.train_set)
+        np.random.shuffle(temp)
+        self.train_set = np.transpose(temp)
 
-                test_small_set = dp.getTestingSet()
-                test_set[0] += test_small_set[0]
-                test_set[1] += test_small_set[1]
+        temp = np.transpose(self.test_set)
+        np.random.shuffle(temp)
+        self.test_set = np.transpose(temp)
 
-    test_set_x, test_set_y = shared_dataset(test_set)
-    valid_set_x, valid_set_y = shared_dataset(valid_set)
-    train_set_x, train_set_y = shared_dataset(train_set)
-    rval = [(train_set_x, train_set_y), (valid_set_x, valid_set_y),
-            (test_set_x, test_set_y)]
-    return rval
+        temp = np.transpose(self.valid_set)
+        np.random.shuffle(temp)
+        self.valid_set = np.transpose(temp)
+
 
 if __name__ == '__main__':
-    load_data('/home/marcin/data/', data_bases=['mitdb', 'incartdb'], stop=1000)
+    dl = DataLoader('/home/marcin/data/', data_bases=['mitdb'], stop=10)
+    aa = dl.load_data()
