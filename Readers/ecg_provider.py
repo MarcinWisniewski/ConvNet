@@ -85,6 +85,8 @@ class DataProvider(object):
         self.signal = np.transpose(self.signal[0])[2:]
 
     def _organize_data(self):
+        self.class_matrix = []
+        self.feature_matrix = []
         channels, signal_length = self.signal.shape
         max_channels_in_input_vector = min(channels, 3)
         for i in xrange(0, signal_length-self.window, self.step):
@@ -103,15 +105,13 @@ class DataProvider(object):
                 frame = self._normalyse(self.signal[channels_to_analyse[channel], i:i+self.window])
                 input_vector[channel] = frame
 
-            r_peaks_in_frame = [r_peak for r_peak in self.r_peaks if r_peak > i and r_peak < i + self.window]
-            r_peaks_in_frame = (r_peaks_in_frame-i*np.ones(len(r_peaks_in_frame)))/1024.0
-            if len(r_peaks_in_frame) != 0:
+            r_peaks_in_frame = next((r_peak for r_peak in self.r_peaks if i < r_peak < i + self.window), None)
+            if r_peaks_in_frame is not None:
+                r_peaks_in_frame /= float(self.window)
                 if self.channels_to_analyse is None or self.number_of_channel_to_analyse is None:
                     np.random.shuffle(input_vector)
                 self.feature_matrix.append(input_vector)
-                target = np.zeros(10)
-                target[0:len(r_peaks_in_frame)] = r_peaks_in_frame
-                self.class_matrix.append(target)
+                self.class_matrix.append(r_peaks_in_frame)
 
     @staticmethod
     def _normalyse(frame):

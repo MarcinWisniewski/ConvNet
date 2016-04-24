@@ -6,12 +6,12 @@ import lasagne
 import theano
 import theano.tensor as T
 import pickle as cPickle
-from Readers.loading_processor import load_data
+from Readers.loading_processor import DataLoader
 from CNN.conv_network import CNN
 
 
 def evaluate_ecg_net(learning_rate=0.01, momentum=0.9, n_epochs=20,
-                    n_kerns=(32, 32, 32, 32, 32), batch_size=256, use_model=True):
+                    n_kerns=(32, 32, 32, 32, 32), batch_size=1024, use_model=False):
     """ Demonstrates lenet on MNIST dataset
 
     :type learning_rate: float
@@ -33,9 +33,11 @@ def evaluate_ecg_net(learning_rate=0.01, momentum=0.9, n_epochs=20,
 
     rng = numpy.random.RandomState(23455)
     db_path = '/home/marcin/data/'
-    data_sets = load_data(db_path, split_factor=90,
-                          window=1024, step=256,
-                          start=0, stop=1400)
+    dl = DataLoader(db_path, split_factor=90,
+                    window=512, step=128,
+                    start=0, stop=400)
+
+    data_sets = dl.load_data()
     train_set_x, train_set_y = data_sets[0]
     valid_set_x, valid_set_y = data_sets[1]
     test_set_x, test_set_y = data_sets[2]
@@ -56,7 +58,7 @@ def evaluate_ecg_net(learning_rate=0.01, momentum=0.9, n_epochs=20,
 
     # start-snippet-1
     x = T.tensor4('x', dtype=theano.config.floatX)    # the data is presented as rasterized images
-    y = T.matrix('y', dtype=theano.config.floatX)   # the target is a 2D matrix with at most 10 normalised indexes of qrs
+    y = T.vector('y', dtype=theano.config.floatX)   # the target is a 2D matrix with at most 10 normalised indexes of qrs
 
     ######################
     # BUILD ACTUAL MODEL #
@@ -196,5 +198,5 @@ def evaluate_ecg_net(learning_rate=0.01, momentum=0.9, n_epochs=20,
                           ' ran for %.2fm' % ((end_time - start_time) / 60.))
 
 if __name__ == '__main__':
-    evaluate_ecg_net(use_model=False)
+    evaluate_ecg_net()
 

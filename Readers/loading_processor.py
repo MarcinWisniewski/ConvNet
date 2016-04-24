@@ -103,6 +103,7 @@ class DataLoader(object):
                     record = record.split('.')[0]
                     dp.prepare_signal(record)
                     train_small_set = dp.get_training_set()
+                    print 'train small set: ', len(train_small_set[0])
                     self.train_set[0] += train_small_set[0]
                     self.train_set[1] += train_small_set[1]
 
