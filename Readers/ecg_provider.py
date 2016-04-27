@@ -107,7 +107,7 @@ class DataProvider(object):
 
             r_peaks_in_frame = next((r_peak for r_peak in self.r_peaks if i < r_peak < i + self.window), None)
             if r_peaks_in_frame is not None:
-                r_peaks_in_frame /= float(self.window)
+                r_peaks_in_frame = (r_peaks_in_frame - i) / float(self.window)
                 if self.channels_to_analyse is None or self.number_of_channel_to_analyse is None:
                     np.random.shuffle(input_vector)
                 self.feature_matrix.append(input_vector)

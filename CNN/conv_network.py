@@ -12,7 +12,7 @@ class CNN(object):
                                                  input_var=self.layer0_input)
 
         self.network = lasagne.layers.Conv2DLayer(incoming=self.network, num_filters=n_kerns[0],
-                                                  filter_size=(1, 5), pad='same', stride=(1, 2),
+                                                  filter_size=(1, 3), pad='same',
                                                   nonlinearity=lasagne.nonlinearities.rectify)
         self.network = lasagne.layers.MaxPool2DLayer(self.network, pool_size=(1, 2))
 
@@ -37,10 +37,10 @@ class CNN(object):
         self.network = lasagne.layers.DenseLayer(lasagne.layers.dropout(self.network, p=.5),
                                                  num_units=64, nonlinearity=lasagne.nonlinearities.rectify)
         self.network = lasagne.layers.DenseLayer(lasagne.layers.dropout(self.network, p=.5),
-                                                 num_units=64, nonlinearity=lasagne.nonlinearities.rectify)
+                                                 num_units=32, nonlinearity=lasagne.nonlinearities.rectify)
 
         self.network = lasagne.layers.DenseLayer(self.network, num_units=1,
-                                                 nonlinearity=lasagne.nonlinearities.rectify)
+                                                 nonlinearity=lasagne.nonlinearities.identity)
 
         # Create a loss expression for training, i.e., a scalar objective we want
         # to minimize (for our multi-class problem, it is the cross-entropy loss):

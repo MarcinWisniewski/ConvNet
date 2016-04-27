@@ -9,9 +9,13 @@ import pickle as cPickle
 from Readers.loading_processor import DataLoader
 from CNN.conv_network import CNN
 
+from theano.compile.nanguardmode import NanGuardMode
 
-def evaluate_ecg_net(learning_rate=0.01, momentum=0.9, n_epochs=20,
-                    n_kerns=(32, 32, 32, 32, 32), batch_size=1024, use_model=False):
+import matplotlib.pyplot as plt
+
+
+def evaluate_ecg_net(learning_rate=0.001, momentum=0.9, n_epochs=20,
+                    n_kerns=(32, 32, 32, 32, 32), batch_size=256, use_model=False):
     """ Demonstrates lenet on MNIST dataset
 
     :type learning_rate: float
@@ -35,7 +39,7 @@ def evaluate_ecg_net(learning_rate=0.01, momentum=0.9, n_epochs=20,
     db_path = '/home/marcin/data/'
     dl = DataLoader(db_path, split_factor=90,
                     window=512, step=128,
-                    start=0, stop=400)
+                    start=0, stop=1000)
 
     data_sets = dl.load_data()
     train_set_x, train_set_y = data_sets[0]
@@ -58,7 +62,7 @@ def evaluate_ecg_net(learning_rate=0.01, momentum=0.9, n_epochs=20,
 
     # start-snippet-1
     x = T.tensor4('x', dtype=theano.config.floatX)    # the data is presented as rasterized images
-    y = T.vector('y', dtype=theano.config.floatX)   # the target is a 2D matrix with at most 10 normalised indexes of qrs
+    y = T.matrix('y', dtype=theano.config.floatX)   # the target is a 2D matrix with at most 10 normalised indexes of qrs
 
     ######################
     # BUILD ACTUAL MODEL #
@@ -107,7 +111,8 @@ def evaluate_ecg_net(learning_rate=0.01, momentum=0.9, n_epochs=20,
         givens={
             x: train_set_x[index * batch_size: (index + 1) * batch_size],
             y: train_set_y[index * batch_size: (index + 1) * batch_size]
-        }
+        },
+        mode=NanGuardMode(nan_is_error=True, inf_is_error=True, big_is_error=True)
     )
     ###############
     # TRAIN MODEL #
@@ -145,8 +150,9 @@ def evaluate_ecg_net(learning_rate=0.01, momentum=0.9, n_epochs=20,
         epoch += 1
         for minibatch_index in xrange(n_train_batches):
             iter = (epoch - 1) * n_train_batches + minibatch_index
-            if iter % 10 == 0:
+            if iter % 100 == 0:
                 print 'training @ iter = ', iter
+
             cost_ij = train_model(minibatch_index)
 
             if (iter + 1) % validation_frequency == 0:

@@ -69,13 +69,14 @@ class DataLoader(object):
         variable) would lead to a large decrease in performance.
         """
         data_x, data_y = data_xy
-        data_x = np.asarray(data_x.tolist(), dtype=theano.config.floatX)
+        data_x = np.asarray(data_x, dtype=theano.config.floatX)
 
         data_x = np.expand_dims(data_x, axis=1)
         shared_x = theano.shared(data_x,
                                  borrow=borrow)
-        shared_y = theano.shared(np.asarray(data_y.tolist(),
-                                               dtype=theano.config.floatX),
+        data_y = np.expand_dims(data_y, axis=1)
+        shared_y = theano.shared(np.asarray(data_y,
+                                            dtype=theano.config.floatX),
                                  borrow=borrow)
         # When storing data on the GPU it has to be stored as floats
         # therefore we will store the labels as ``floatX`` as well
@@ -115,7 +116,7 @@ class DataLoader(object):
                     self.test_set[0] += test_small_set[0]
                     self.test_set[1] += test_small_set[1]
 
-        self._reshuffle_data()
+        #self._reshuffle_data()
         test_set_x, test_set_y = self.shared_dataset(self.test_set)
         valid_set_x, valid_set_y = self.shared_dataset(self.valid_set)
         train_set_x, train_set_y = self.shared_dataset(self.train_set)
