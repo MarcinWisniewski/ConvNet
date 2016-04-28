@@ -34,7 +34,7 @@ def recognize_signal():
     cn_net.__setstate__(cPickle.load(f))
     f.close()
     test_prediction = lasagne.layers.get_output(cn_net.network, deterministic=True)
-    window = 1024
+    window = 512
     dp = DataProvider(db_path, split_factor=100,
                       window=window, step=window,
                       number_of_channel_to_analyse=1,
@@ -57,12 +57,12 @@ def recognize_signal():
             for mini_batch_index in xrange(batch_size):
                 if SHOW_FRAME:
                     plt.plot(input_matrix[mini_batch_index][0][0])
-                    plt.plot(indexes[mini_batch_index][:], np.ones(len(indexes)), 'ro')
+                    plt.plot(indexes[mini_batch_index], 0.9, 'ro')
                     plt.close()
 
                 indexes[mini_batch_index] += (index_of_frame+mini_batch_index)*window  #window/skip
 
-            [annot_list.append((round(index+index_of_frame*window), 1)) for index in indexes[0] if index > 0]
+            annot_list += [(int(index), 1) for index in indexes if index > 0]
 
         print 'saving annot file'
         file_path = os.path.join(db_path, record)

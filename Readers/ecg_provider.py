@@ -113,6 +113,7 @@ class DataProvider(object):
                 self.feature_matrix.append(input_vector)
                 self.class_matrix.append(r_peaks_in_frame)
 
+
     @staticmethod
     def _normalyse(frame):
         frame_copy = np.copy(frame)

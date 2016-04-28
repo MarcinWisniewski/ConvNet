@@ -14,8 +14,8 @@ from theano.compile.nanguardmode import NanGuardMode
 import matplotlib.pyplot as plt
 
 
-def evaluate_ecg_net(learning_rate=0.001, momentum=0.9, n_epochs=20,
-                    n_kerns=(32, 32, 32, 32, 32), batch_size=256, use_model=False):
+def evaluate_ecg_net(learning_rate=0.01, momentum=0.9, n_epochs=20,
+                    n_kerns=(32, 32, 32, 32, 32), batch_size=128, use_model=False):
     """ Demonstrates lenet on MNIST dataset
 
     :type learning_rate: float
@@ -39,7 +39,7 @@ def evaluate_ecg_net(learning_rate=0.001, momentum=0.9, n_epochs=20,
     db_path = '/home/marcin/data/'
     dl = DataLoader(db_path, split_factor=90,
                     window=512, step=128,
-                    start=0, stop=1000)
+                    start=0, stop=1200)
 
     data_sets = dl.load_data()
     train_set_x, train_set_y = data_sets[0]
@@ -125,7 +125,7 @@ def evaluate_ecg_net(learning_rate=0.001, momentum=0.9, n_epochs=20,
 
     print '... training'
     # early-stopping parameters
-    patience = 1000  # look as this many examples regardless
+    patience = 600  # look as this many examples regardless
     patience_increase = 2  # wait this much longer when a new best is
                            # found
     improvement_threshold = 0.995  # a relative improvement of this much is
@@ -150,7 +150,7 @@ def evaluate_ecg_net(learning_rate=0.001, momentum=0.9, n_epochs=20,
         epoch += 1
         for minibatch_index in xrange(n_train_batches):
             iter = (epoch - 1) * n_train_batches + minibatch_index
-            if iter % 100 == 0:
+            if iter % 50 == 0:
                 print 'training @ iter = ', iter
 
             cost_ij = train_model(minibatch_index)

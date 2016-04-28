@@ -69,7 +69,7 @@ class DataLoader(object):
         variable) would lead to a large decrease in performance.
         """
         data_x, data_y = data_xy
-        data_x = np.asarray(data_x, dtype=theano.config.floatX)
+        data_x = np.asarray(data_x.tolist(), dtype=theano.config.floatX)
 
         data_x = np.expand_dims(data_x, axis=1)
         shared_x = theano.shared(data_x,
@@ -97,7 +97,7 @@ class DataLoader(object):
             records = [record for record in os.listdir(data_base_path) if record.endswith('.dat')]
             dp = DataProvider(data_base_path, split_factor=self.split_factor,
                               window=self.window, step=self.step, start=self.start, stop=self.stop,
-                              number_of_channel_to_analyse=1, channels_to_analyse=[1])
+                              number_of_channel_to_analyse=None, channels_to_analyse=None)
             for record in records:
                 if record.endswith('.dat'):
                     print 'loading file: ', record
@@ -116,7 +116,7 @@ class DataLoader(object):
                     self.test_set[0] += test_small_set[0]
                     self.test_set[1] += test_small_set[1]
 
-        #self._reshuffle_data()
+        self._reshuffle_data()
         test_set_x, test_set_y = self.shared_dataset(self.test_set)
         valid_set_x, valid_set_y = self.shared_dataset(self.valid_set)
         train_set_x, train_set_y = self.shared_dataset(self.train_set)
