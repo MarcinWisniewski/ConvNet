@@ -23,7 +23,7 @@ annot_dict = {1: 1,                          #N
               5: 2, 6: 2, 10: 2,             #V, F, E
               7: 3, 8: 3, 9: 3, 11: 3, 4: 3} #J, A, S, j, a,
 
-INDEX_OF_BEAT_ANNOTS = range(1, 13) + [34, 35, 38]
+INDEX_OF_BEAT_ANNOTS = range(1, 13) + [25, 34, 35, 38]
 
 
 class DataProvider(object):
@@ -105,13 +105,14 @@ class DataProvider(object):
                 frame = self._normalyse(self.signal[channels_to_analyse[channel], i:i+self.window])
                 input_vector[channel] = frame
 
-            r_peaks_in_frame = next((r_peak for r_peak in self.r_peaks if i < r_peak < i + self.window), None)
-            if r_peaks_in_frame is not None:
+            r_peaks_in_frame = next((r_peak for r_peak in self.r_peaks if i < r_peak < i + self.window), 0)
+            if r_peaks_in_frame != 0:
                 r_peaks_in_frame = (r_peaks_in_frame - i) / float(self.window)
-                if self.channels_to_analyse is None or self.number_of_channel_to_analyse is None:
-                    np.random.shuffle(input_vector)
-                self.feature_matrix.append(input_vector)
-                self.class_matrix.append(r_peaks_in_frame)
+
+            if self.channels_to_analyse is None or self.number_of_channel_to_analyse is None:
+                np.random.shuffle(input_vector)
+            self.feature_matrix.append(input_vector)
+            self.class_matrix.append(r_peaks_in_frame)
 
 
     @staticmethod

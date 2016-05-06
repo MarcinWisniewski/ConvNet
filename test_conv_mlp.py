@@ -36,7 +36,7 @@ def recognize_signal():
     test_prediction = lasagne.layers.get_output(cn_net.network, deterministic=True)
     window = 512
     dp = DataProvider(db_path, split_factor=100,
-                      window=window, step=window,
+                      window=window, step=window/2,
                       number_of_channel_to_analyse=1,
                       channels_to_analyse=[0])
     get_r_peaks = theano.function([x], test_prediction)
@@ -46,9 +46,10 @@ def recognize_signal():
         dp.prepare_signal(record)
         signal = dp.signal
         feature_matrix = dp.feature_matrix
+        batch_size = len(feature_matrix)
         print 'signal length', len(signal)
         annot_list = []
-        for index_of_frame in xrange(0, len(feature_matrix)-batch_size, batch_size):
+        for index_of_frame in xrange(0, len(feature_matrix)-batch_size+1, batch_size):
             input_matrix = np.asarray(feature_matrix[index_of_frame:index_of_frame+batch_size],
                                       dtype=theano.config.floatX)
             input_matrix = np.expand_dims(input_matrix, 1)

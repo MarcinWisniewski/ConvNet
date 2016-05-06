@@ -14,39 +14,41 @@ from theano.compile.nanguardmode import NanGuardMode
 import matplotlib.pyplot as plt
 
 
-def evaluate_ecg_net(learning_rate=0.01, momentum=0.9, n_epochs=20,
-                    n_kerns=(32, 32, 32, 32, 32), batch_size=128, use_model=False):
-    """ Demonstrates lenet on MNIST dataset
+def evaluate_ecg_net(learning_rate=0.001, momentum=0.9, n_epochs=20,
+                    n_kerns=(32, 32, 32, 32, 32), batch_size=1024, use_model=True):
+    """ qrs detector on mit and incart data (fs=360Hz)
 
     :type learning_rate: float
     :param learning_rate: learning rate used (factor for the stochastic
                           gradient)
 
+    :type momentum: float
+    :param momentum: momentum in SGD
+
     :type n_epochs: int
     :param n_epochs: maximal number of epochs to run the optimizer
-
-    :type dataset: string
-    :param dataset: path to the dataset used for training /testing (wfdb here)
 
     :type n_kerns: list of ints
     :param n_kerns: number of kernels on each layer
 
     :type batch_size: int
     :param batch_size: number of examples in minibatch
+
+    :type use_model: bool
+    param: use_model: choosing to use pre trained model
     """
 
     rng = numpy.random.RandomState(23455)
     db_path = '/home/marcin/data/'
     dl = DataLoader(db_path, split_factor=90,
                     window=512, step=128,
-                    start=0, stop=1200)
+                    start=0, stop=1500)
 
     data_sets = dl.load_data()
     train_set_x, train_set_y = data_sets[0]
     valid_set_x, valid_set_y = data_sets[1]
     test_set_x, test_set_y = data_sets[2]
 
-    # compute number of minibatches for training, validation and testing
     print 'number of training examples: ', train_set_x.get_value(borrow=True).shape[0]
     print 'number of testing examples: ', test_set_x.get_value(borrow=True).shape[0]
     print 'number of valid examples: ', valid_set_x.get_value(borrow=True).shape[0]
@@ -60,9 +62,8 @@ def evaluate_ecg_net(learning_rate=0.01, momentum=0.9, n_epochs=20,
     # allocate symbolic variables for the data
     index = T.lscalar()  # index to a [mini]batch
 
-    # start-snippet-1
-    x = T.tensor4('x', dtype=theano.config.floatX)    # the data is presented as rasterized images
-    y = T.matrix('y', dtype=theano.config.floatX)   # the target is a 2D matrix with at most 10 normalised indexes of qrs
+    x = T.tensor4('x', dtype=theano.config.floatX)    # the data is presented as qrs normalized to [0-1]
+    y = T.matrix('y', dtype=theano.config.floatX)   # the target is a 2D matrix with 1 normalised index of qrs
 
     ######################
     # BUILD ACTUAL MODEL #
@@ -70,6 +71,13 @@ def evaluate_ecg_net(learning_rate=0.01, momentum=0.9, n_epochs=20,
     print '... building the model'
     cnn = CNN(x, n_kerns, batch_size)
     print 'CNN with %i parameters' % lasagne.layers.count_params(cnn.network)
+
+    if use_model:
+        print 'loading model from file...'
+        f = open('qrs_model.bin', 'rb')
+        cnn.__setstate__(cPickle.load(f))
+        f.close()
+
     prediction = lasagne.layers.get_output(cnn.network)
     # the cost we minimize during training is the NLL of the model
     loss = lasagne.objectives.squared_error(prediction, y)
@@ -83,9 +91,7 @@ def evaluate_ecg_net(learning_rate=0.01, momentum=0.9, n_epochs=20,
     test_prediction = lasagne.layers.get_output(cnn.network, deterministic=True)
     test_loss = lasagne.objectives.squared_error(test_prediction, y)
     test_loss = test_loss.mean()
-    # As a bonus, also create an expression for the classification accuracy:
 
-    # create a function to compute the mistakes that are made by the model
     test_model = theano.function(
         [index],
         [test_loss],
@@ -114,18 +120,13 @@ def evaluate_ecg_net(learning_rate=0.01, momentum=0.9, n_epochs=20,
         },
         mode=NanGuardMode(nan_is_error=True, inf_is_error=True, big_is_error=True)
     )
+    
     ###############
     # TRAIN MODEL #
     ###############
-
-    if use_model:
-        f = open('qrs_model.bin', 'rb')
-        cnn.__setstate__(cPickle.load(f))
-        f.close()
-
     print '... training'
     # early-stopping parameters
-    patience = 600  # look as this many examples regardless
+    patience = 1200  # look as this many examples regardless
     patience_increase = 2  # wait this much longer when a new best is
                            # found
     improvement_threshold = 0.995  # a relative improvement of this much is
