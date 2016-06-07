@@ -14,8 +14,8 @@ from theano.compile.nanguardmode import NanGuardMode
 import matplotlib.pyplot as plt
 
 
-def evaluate_ecg_net(learning_rate=0.001, momentum=0.9, n_epochs=20,
-                    n_kerns=(32, 32, 32, 32, 32), batch_size=1024, use_model=True):
+def evaluate_ecg_net(learning_rate=0.001, momentum=0.9, n_epochs=40,
+                    n_kerns=(32, 32, 32, 32, 32), batch_size=2048, use_model=True):
     """ qrs detector on mit and incart data (fs=360Hz)
 
     :type learning_rate: float
@@ -41,8 +41,8 @@ def evaluate_ecg_net(learning_rate=0.001, momentum=0.9, n_epochs=20,
     rng = numpy.random.RandomState(23455)
     db_path = '/home/marcin/data/'
     dl = DataLoader(db_path, split_factor=90,
-                    window=512, step=128,
-                    start=0, stop=1500)
+                    window=256, step=128,
+                    start=0, stop=1600)
 
     data_sets = dl.load_data()
     train_set_x, train_set_y = data_sets[0]
@@ -117,8 +117,7 @@ def evaluate_ecg_net(learning_rate=0.001, momentum=0.9, n_epochs=20,
         givens={
             x: train_set_x[index * batch_size: (index + 1) * batch_size],
             y: train_set_y[index * batch_size: (index + 1) * batch_size]
-        },
-        mode=NanGuardMode(nan_is_error=True, inf_is_error=True, big_is_error=True)
+        }
     )
     
     ###############

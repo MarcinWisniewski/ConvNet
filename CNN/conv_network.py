@@ -6,7 +6,7 @@ class CNN(object):
     def __init__(self, input, n_kerns, batch_size):
 
         assert len(n_kerns) == 5
-        self.input_signal_length = 512
+        self.input_signal_length = 256
         self.layer0_input = input
         self.network = lasagne.layers.InputLayer(shape=(None, 1, 3, self.input_signal_length),
                                                  input_var=self.layer0_input)
@@ -35,9 +35,9 @@ class CNN(object):
                                                   nonlinearity=lasagne.nonlinearities.rectify)
 
         self.network = lasagne.layers.DenseLayer(lasagne.layers.dropout(self.network, p=.5),
-                                                 num_units=64, nonlinearity=lasagne.nonlinearities.rectify)
+                                                 num_units=128, nonlinearity=lasagne.nonlinearities.rectify)
         self.network = lasagne.layers.DenseLayer(lasagne.layers.dropout(self.network, p=.5),
-                                                 num_units=32, nonlinearity=lasagne.nonlinearities.rectify)
+                                                 num_units=128, nonlinearity=lasagne.nonlinearities.rectify)
 
         self.network = lasagne.layers.DenseLayer(self.network, num_units=1,
                                                  nonlinearity=lasagne.nonlinearities.identity)

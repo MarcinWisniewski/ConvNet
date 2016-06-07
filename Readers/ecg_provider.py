@@ -83,6 +83,7 @@ class DataProvider(object):
         self.signal = rdsamp(record_path, end=self.stop)
         self.signal_info = self.signal[1]
         self.signal = np.transpose(self.signal[0])[2:]
+        #plt.plot(self.signal[:, 0:3000].T)
 
     def _organize_data(self):
         self.class_matrix = []
@@ -119,7 +120,7 @@ class DataProvider(object):
     def _normalyse(frame):
         frame_copy = np.copy(frame)
         frame_copy -= frame_copy.min()
-        frame_copy /= frame_copy.max()
+        #frame_copy /= frame_copy.max()
         return frame_copy
 
 

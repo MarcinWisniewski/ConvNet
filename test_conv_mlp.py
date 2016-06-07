@@ -36,7 +36,7 @@ def recognize_signal():
     test_prediction = lasagne.layers.get_output(cn_net.network, deterministic=True)
     window = 512
     dp = DataProvider(db_path, split_factor=100,
-                      window=window, step=window/2,
+                      window=window, step=window/4,
                       number_of_channel_to_analyse=1,
                       channels_to_analyse=[0])
     get_r_peaks = theano.function([x], test_prediction)
@@ -65,6 +65,10 @@ def recognize_signal():
 
             annot_list += [(int(index), 1) for index in indexes if index > 0]
 
+        rr = np.diff(map(lambda (k, v): k,  annot_list))
+        for i in xrange(len(annot_list)-1):
+            if rr[i] < 54:
+                annot_list.pop(i+1)
         print 'saving annot file'
         file_path = os.path.join(db_path, record)
         wrann(annot_list, file_path + '.tan')
