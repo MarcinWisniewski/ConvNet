@@ -2,6 +2,7 @@ __author__ = 'MW'
 
 import os
 import theano
+import theano.tensor as T
 import numpy as np
 from ecg_provider import DataProvider
 import matplotlib.pyplot as plt
@@ -54,9 +55,9 @@ class DataLoader(object):
         self.start = start
         self.stop = stop
 
-        self.train_set = [[], []]
-        self.valid_set = [[], []]
-        self.test_set = [[], []]
+        self.train_set = [[], [], []]
+        self.valid_set = [[], [], []]
+        self.test_set = [[], [], []]
 
     def shared_dataset(self, data_xy, borrow=True):
 
@@ -68,15 +69,22 @@ class DataLoader(object):
         is needed (the default behaviour if the data is not in a shared
         variable) would lead to a large decrease in performance.
         """
-        data_x, data_y = data_xy
-        data_x = np.asarray(data_x.tolist(), dtype=theano.config.floatX)
+        data_x_qrs, data_x_rr, data_y = data_xy
+        data_x_qrs = np.asarray(data_x_qrs.tolist(), dtype=theano.config.floatX)
 
-        data_x = np.expand_dims(data_x, axis=1)
-        shared_x = theano.shared(data_x,
-                                 borrow=borrow)
-        data_y = np.expand_dims(data_y, axis=1)
+        data_x_qrs = np.expand_dims(data_x_qrs, axis=1)
+        shared_x_qrs = theano.shared(data_x_qrs,
+                                    borrow=borrow)
+
+        data_x_rr = np.asarray(data_x_rr.tolist(), dtype=theano.config.floatX)
+
+        data_x_rr = np.expand_dims(data_x_rr, axis=1)
+        shared_x_rr = theano.shared(data_x_rr,
+                                    borrow=borrow)
+
+        #data_y = np.expand_dims(data_y, axis=1)
         shared_y = theano.shared(np.asarray(data_y,
-                                            dtype=theano.config.floatX),
+                                            dtype=np.int32),
                                  borrow=borrow)
         # When storing data on the GPU it has to be stored as floats
         # therefore we will store the labels as ``floatX`` as well
@@ -85,7 +93,7 @@ class DataLoader(object):
         # floats it doesn't make sense) therefore instead of returning
         # ``shared_y`` we will have to cast it to int. This little hack
         # lets ous get around this issue
-        return shared_x, shared_y
+        return shared_x_qrs, shared_x_rr, shared_y
 
     def load_data(self):
         #############
@@ -105,23 +113,27 @@ class DataLoader(object):
                     dp.prepare_signal(record)
                     train_small_set = dp.get_training_set()
                     print 'train small set: ', len(train_small_set[0])
+
                     self.train_set[0] += train_small_set[0]
                     self.train_set[1] += train_small_set[1]
+                    self.train_set[2] += train_small_set[2]
 
                     valid_small_set = dp.get_validate_set()
                     self.valid_set[0] += valid_small_set[0]
                     self.valid_set[1] += valid_small_set[1]
+                    self.valid_set[2] += valid_small_set[2]
 
                     test_small_set = dp.get_testing_set()
                     self.test_set[0] += test_small_set[0]
                     self.test_set[1] += test_small_set[1]
+                    self.test_set[2] += test_small_set[2]
 
         self._reshuffle_data()
-        test_set_x, test_set_y = self.shared_dataset(self.test_set)
-        valid_set_x, valid_set_y = self.shared_dataset(self.valid_set)
-        train_set_x, train_set_y = self.shared_dataset(self.train_set)
-        rval = [(train_set_x, train_set_y), (valid_set_x, valid_set_y),
-                (test_set_x, test_set_y)]
+        test_set_x_qrs, test_set_x_rr, test_set_y = self.shared_dataset(self.test_set)
+        valid_set_x_qrs, valid_set_x_rr, valid_set_y = self.shared_dataset(self.valid_set)
+        train_set_x_qrs, train_set_x_rr, train_set_y = self.shared_dataset(self.train_set)
+        rval = [(train_set_x_qrs, train_set_x_rr, train_set_y), (valid_set_x_qrs, valid_set_x_rr, valid_set_y),
+                (test_set_x_qrs, test_set_x_rr, test_set_y)]
         return rval
 
     def _reshuffle_data(self):

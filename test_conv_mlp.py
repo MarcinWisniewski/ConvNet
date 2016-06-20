@@ -8,6 +8,7 @@ import theano.tensor as T
 import theano
 import lasagne
 import os
+from subprocess import call
 import matplotlib.pyplot as plt
 
 from CNN.conv_network import CNN
@@ -15,10 +16,10 @@ from Readers.ecg_provider import DataProvider
 from WFDBTools.wfdb_wrann import wrann
 import cProfile
 
-N_KERNS = (32, 32, 32, 32, 32)
+N_KERNS = (64, 64, 32, 32, 32)
 # dict from class to wfdb code
 annotation_dict = {0: 0, 1: 1, 2: 5, 3: 9}
-db_path = '/home/marcin/data/mitdb'
+db_path = '/home/marcin/data/incartdb'
 
 files = os.listdir(db_path)
 files = [record.split('.')[0] for record in files if record.split('.')[-1] == 'dat']
@@ -26,53 +27,46 @@ SHOW_FRAME = False
 
 
 def recognize_signal():
-    x = T.tensor4('x', dtype=theano.config.floatX)    # the data is presented as rasterized images
+    x_qrs = T.tensor4('x_qrs', dtype=theano.config.floatX)    # the data is presented as qrs normalized to [0-1]
+    x_rr = T.tensor4('x_rr', dtype=theano.config.floatX)    # the data is presented as qrs normalized to [0-1]
     batch_size = 128
     rng = np.random.RandomState(23455)
-    f = open('qrs_model.bin', 'rb')
-    cn_net = CNN(x, N_KERNS, batch_size)
+    f = open('qrs_model_64filters.bin', 'rb')
+    cn_net = CNN(x_qrs, x_rr, N_KERNS, batch_size)
     cn_net.__setstate__(cPickle.load(f))
     f.close()
-    test_prediction = lasagne.layers.get_output(cn_net.network, deterministic=True)
-    window = 512
-    dp = DataProvider(db_path, split_factor=100,
-                      window=window, step=window/4,
-                      number_of_channel_to_analyse=1,
-                      channels_to_analyse=[0])
-    get_r_peaks = theano.function([x], test_prediction)
+    test_prediction = lasagne.layers.get_output(cn_net.mlp_net, deterministic=True)
+    dp = DataProvider(db_path, split_factor=100, window=256,
+                      start=0, stop=-1)
+    get_r_peaks = theano.function([x_qrs, x_rr], test_prediction)
     for record in files:
         print '...analysing record', record
         total_time = timeit.default_timer()
         dp.prepare_signal(record)
         signal = dp.signal
-        feature_matrix = dp.feature_matrix
-        batch_size = len(feature_matrix)
+        qrs_feature_matrix = dp.qrs_feature_matrix
+        rr_feature_matrix = dp.rr_feature_matrix
         print 'signal length', len(signal)
-        annot_list = []
-        for index_of_frame in xrange(0, len(feature_matrix)-batch_size+1, batch_size):
-            input_matrix = np.asarray(feature_matrix[index_of_frame:index_of_frame+batch_size],
-                                      dtype=theano.config.floatX)
-            input_matrix = np.expand_dims(input_matrix, 1)
-            indexes = get_r_peaks(input_matrix)
-            indexes *= window
-            for mini_batch_index in xrange(batch_size):
-                if SHOW_FRAME:
-                    plt.plot(input_matrix[mini_batch_index][0][0])
-                    plt.plot(indexes[mini_batch_index], 0.9, 'ro')
-                    plt.close()
+        qrs_feature_matrix = np.expand_dims(qrs_feature_matrix, 1)
+        rr_feature_matrix = np.expand_dims(rr_feature_matrix, 1)
+        morph = get_r_peaks(qrs_feature_matrix, rr_feature_matrix)
+        assert len(morph) == len(dp.original_r_peaks)
+        morph = np.argmax(morph, axis=1)
+        r_peaks = map(lambda (ind, ann): ind, dp.original_r_peaks)
+        morph = map(lambda org_morph: annotation_dict[org_morph+1], morph)
+        annot_list = zip(r_peaks, morph)
 
-                indexes[mini_batch_index] += (index_of_frame+mini_batch_index)*window  #window/skip
-
-            annot_list += [(int(index), 1) for index in indexes if index > 0]
-
-        rr = np.diff(map(lambda (k, v): k,  annot_list))
-        for i in xrange(len(annot_list)-1):
-            if rr[i] < 54:
-                annot_list.pop(i+1)
+        #rr = np.diff(map(lambda (k, v): k,  annot_list))
         print 'saving annot file'
         file_path = os.path.join(db_path, record)
         wrann(annot_list, file_path + '.tan')
         print timeit.default_timer() - total_time
+
+        call(['bxb', '-r', record, '-a', 'atr', 'tan', '-f', '0', '-L', 'result.bxb', '-'])
+        call(['rxr', '-r', record, '-a', 'atr', 'tan', '-f', '0', '-L', 'result.rxr', 's_result.rxr'])
+
+
+
 
 
 if __name__ == '__main__':

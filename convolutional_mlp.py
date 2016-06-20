@@ -8,14 +8,15 @@ import theano.tensor as T
 import pickle as cPickle
 from Readers.loading_processor import DataLoader
 from CNN.conv_network import CNN
-
 from theano.compile.nanguardmode import NanGuardMode
 
 import matplotlib.pyplot as plt
 
 
-def evaluate_ecg_net(learning_rate=0.001, momentum=0.9, n_epochs=40,
-                    n_kerns=(32, 32, 32, 32, 32), batch_size=2048, use_model=True):
+def evaluate_ecg_net(learning_rate=0.01, momentum=0.9, n_epochs=40,
+                     qrs_n_kerns=(50, 65, 30, 32, 16),
+                     rr_n_kerns=(45, 64, 50, 16),
+                     batch_size=1024, use_model=False):
     """ qrs detector on mit and incart data (fs=360Hz)
 
     :type learning_rate: float
@@ -28,8 +29,12 @@ def evaluate_ecg_net(learning_rate=0.001, momentum=0.9, n_epochs=40,
     :type n_epochs: int
     :param n_epochs: maximal number of epochs to run the optimizer
 
-    :type n_kerns: list of ints
-    :param n_kerns: number of kernels on each layer
+    :type qrs_n_kerns: list of ints
+    :param qrs_n_kerns: number of kernels on each layer for qrs
+
+    :type rr_n_kerns: list of ints
+    :param rr_n_kerns: number of kernels on each layer for rr
+
 
     :type batch_size: int
     :param batch_size: number of examples in minibatch
@@ -42,19 +47,19 @@ def evaluate_ecg_net(learning_rate=0.001, momentum=0.9, n_epochs=40,
     db_path = '/home/marcin/data/'
     dl = DataLoader(db_path, split_factor=90,
                     window=256, step=128,
-                    start=0, stop=1600)
+                    start=0, stop=1500)
 
     data_sets = dl.load_data()
-    train_set_x, train_set_y = data_sets[0]
-    valid_set_x, valid_set_y = data_sets[1]
-    test_set_x, test_set_y = data_sets[2]
+    train_set_x_qrs, train_set_x_rr, train_set_y = data_sets[0]
+    valid_set_x_qrs, valid_set_x_rr, valid_set_y = data_sets[1]
+    test_set_x_qrs, test_set_x_rr, test_set_y = data_sets[2]
 
-    print 'number of training examples: ', train_set_x.get_value(borrow=True).shape[0]
-    print 'number of testing examples: ', test_set_x.get_value(borrow=True).shape[0]
-    print 'number of valid examples: ', valid_set_x.get_value(borrow=True).shape[0]
-    n_train_batches = train_set_x.get_value(borrow=True).shape[0]
-    n_valid_batches = valid_set_x.get_value(borrow=True).shape[0]
-    n_test_batches = test_set_x.get_value(borrow=True).shape[0]
+    print 'number of training examples: ', train_set_x_qrs.get_value(borrow=True).shape[0]
+    print 'number of testing examples: ', test_set_x_qrs.get_value(borrow=True).shape[0]
+    print 'number of valid examples: ', valid_set_x_qrs.get_value(borrow=True).shape[0]
+    n_train_batches = train_set_x_qrs.get_value(borrow=True).shape[0]
+    n_valid_batches = valid_set_x_qrs.get_value(borrow=True).shape[0]
+    n_test_batches = test_set_x_qrs.get_value(borrow=True).shape[0]
     n_train_batches /= batch_size
     n_valid_batches /= batch_size
     n_test_batches /= batch_size
@@ -62,15 +67,17 @@ def evaluate_ecg_net(learning_rate=0.001, momentum=0.9, n_epochs=40,
     # allocate symbolic variables for the data
     index = T.lscalar()  # index to a [mini]batch
 
-    x = T.tensor4('x', dtype=theano.config.floatX)    # the data is presented as qrs normalized to [0-1]
-    y = T.matrix('y', dtype=theano.config.floatX)   # the target is a 2D matrix with 1 normalised index of qrs
+    x_qrs = T.tensor4('x_qrs', dtype=theano.config.floatX)    # the data is presented as qrs normalized to [0-1]
+    x_rr = T.tensor4('x_rr', dtype=theano.config.floatX)    # the data is presented as qrs normalized to [0-1]
+
+    y = T.ivector('y')   # the target is a 2D matrix with 1 normalised index of qrs
 
     ######################
     # BUILD ACTUAL MODEL #
     ######################
     print '... building the model'
-    cnn = CNN(x, n_kerns, batch_size)
-    print 'CNN with %i parameters' % lasagne.layers.count_params(cnn.network)
+    cnn = CNN(x_qrs, x_rr, qrs_n_kerns, rr_n_kerns, batch_size)
+    print 'CNN with %i parameters' % lasagne.layers.count_params(cnn.mlp_net)
 
     if use_model:
         print 'loading model from file...'
@@ -78,34 +85,39 @@ def evaluate_ecg_net(learning_rate=0.001, momentum=0.9, n_epochs=40,
         cnn.__setstate__(cPickle.load(f))
         f.close()
 
-    prediction = lasagne.layers.get_output(cnn.network)
-    # the cost we minimize during training is the NLL of the model
-    loss = lasagne.objectives.squared_error(prediction, y)
+    prediction = lasagne.layers.get_output(cnn.mlp_net)
+    loss = lasagne.objectives.categorical_crossentropy(prediction, y)
     loss = loss.mean()
 
-    parameters = lasagne.layers.get_all_params(cnn.network, trainable=True)
-    updates = lasagne.updates.nesterov_momentum(loss, parameters,
+    params = lasagne.layers.get_all_params(cnn.mlp_net, trainable=True)
+    updates = lasagne.updates.nesterov_momentum(loss, params,
                                                 learning_rate=learning_rate,
                                                 momentum=momentum)
 
-    test_prediction = lasagne.layers.get_output(cnn.network, deterministic=True)
-    test_loss = lasagne.objectives.squared_error(test_prediction, y)
+    test_prediction = lasagne.layers.get_output(cnn.mlp_net, deterministic=True)
+    test_loss = lasagne.objectives.categorical_crossentropy(test_prediction, y)
     test_loss = test_loss.mean()
+
+    validate_prediction = lasagne.layers.get_output(cnn.mlp_net, deterministic=True)
+    validate_loss = lasagne.objectives.categorical_crossentropy(validate_prediction, y)
+    validate_loss = validate_loss.mean()
 
     test_model = theano.function(
         [index],
         [test_loss],
         givens={
-            x: test_set_x[index * batch_size: (index + 1) * batch_size],
+            x_qrs: test_set_x_qrs[index * batch_size: (index + 1) * batch_size],
+            x_rr: test_set_x_rr[index * batch_size: (index + 1) * batch_size],
             y: test_set_y[index * batch_size: (index + 1) * batch_size]
         }
     )
 
     validate_model = theano.function(
         [index],
-        [test_loss],
+        [validate_loss],
         givens={
-            x: valid_set_x[index * batch_size: (index + 1) * batch_size],
+            x_qrs: valid_set_x_qrs[index * batch_size: (index + 1) * batch_size],
+            x_rr: valid_set_x_rr[index * batch_size: (index + 1) * batch_size],
             y: valid_set_y[index * batch_size: (index + 1) * batch_size]
         }
     )
@@ -115,17 +127,18 @@ def evaluate_ecg_net(learning_rate=0.001, momentum=0.9, n_epochs=40,
         loss,
         updates=updates,
         givens={
-            x: train_set_x[index * batch_size: (index + 1) * batch_size],
+            x_qrs: train_set_x_qrs[index * batch_size: (index + 1) * batch_size],
+            x_rr: train_set_x_rr[index * batch_size: (index + 1) * batch_size],
             y: train_set_y[index * batch_size: (index + 1) * batch_size]
         }
     )
-    
+
     ###############
     # TRAIN MODEL #
     ###############
     print '... training'
     # early-stopping parameters
-    patience = 1200  # look as this many examples regardless
+    patience = 1000  # look as this many examples regardless
     patience_increase = 2  # wait this much longer when a new best is
                            # found
     improvement_threshold = 0.995  # a relative improvement of this much is
@@ -143,7 +156,7 @@ def evaluate_ecg_net(learning_rate=0.001, momentum=0.9, n_epochs=40,
 
     epoch = 0
     done_looping = False
-    best_cnn = CNN(x, n_kerns, batch_size)
+    best_cnn = CNN(x_qrs, x_rr, qrs_n_kerns, rr_n_kerns, batch_size)
     print 'valid frequency - %i iterations' % validation_frequency
     print 'number of epochs - %i ' % n_epochs
     while (epoch < n_epochs) and (not done_looping):

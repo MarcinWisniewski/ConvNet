@@ -1,52 +1,85 @@
 __author__ = 'Marcin'
 import lasagne
+from lasagne.layers import ConcatLayer
 
 
 class CNN(object):
-    def __init__(self, input, n_kerns, batch_size):
+    def __init__(self, input_qrs, input_rr, qrs_n_kerns, rr_n_kerns, batch_size):
 
-        assert len(n_kerns) == 5
+        assert len(qrs_n_kerns) == 5
         self.input_signal_length = 256
-        self.layer0_input = input
-        self.network = lasagne.layers.InputLayer(shape=(None, 1, 3, self.input_signal_length),
-                                                 input_var=self.layer0_input)
+        self.input_rr_length = 32
+        self.layer0_input_qrs = input_qrs
+        self.layer0_input_rr = input_rr
+        self.cnn_qrs_net = lasagne.layers.InputLayer(shape=(None, 1, 1, self.input_signal_length),
+                                                     input_var=self.layer0_input_qrs)
 
-        self.network = lasagne.layers.Conv2DLayer(incoming=self.network, num_filters=n_kerns[0],
-                                                  filter_size=(1, 3), pad='same',
-                                                  nonlinearity=lasagne.nonlinearities.rectify)
-        self.network = lasagne.layers.MaxPool2DLayer(self.network, pool_size=(1, 2))
+        self.cnn_qrs_net = lasagne.layers.Conv2DLayer(incoming=self.cnn_qrs_net, num_filters=qrs_n_kerns[0],
+                                                      filter_size=(1, 15), pad='same',
+                                                      W=lasagne.init.GlorotUniform(),
+                                                      nonlinearity=lasagne.nonlinearities.rectify)
+        self.cnn_qrs_net = lasagne.layers.MaxPool2DLayer(self.cnn_qrs_net, pool_size=(1, 2))
 
-        self.network = lasagne.layers.Conv2DLayer(incoming=self.network, num_filters=n_kerns[1],
-                                                  filter_size=(1, 3), pad='same',
-                                                  nonlinearity=lasagne.nonlinearities.rectify)
-        self.network = lasagne.layers.MaxPool2DLayer(self.network, pool_size=(1, 2))
+        self.cnn_qrs_net = lasagne.layers.Conv2DLayer(incoming=self.cnn_qrs_net, num_filters=qrs_n_kerns[1],
+                                                      filter_size=(1, 7), pad='same',
+                                                      W=lasagne.init.GlorotUniform(),
+                                                      nonlinearity=lasagne.nonlinearities.rectify)
+        self.cnn_qrs_net = lasagne.layers.MaxPool2DLayer(self.cnn_qrs_net, pool_size=(1, 2))
 
-        self.network = lasagne.layers.Conv2DLayer(incoming=self.network, num_filters=n_kerns[2],
-                                                  filter_size=(1, 3), pad='same',
-                                                  nonlinearity=lasagne.nonlinearities.rectify)
-        self.network = lasagne.layers.MaxPool2DLayer(self.network, pool_size=(1, 2))
+        self.cnn_qrs_net = lasagne.layers.Conv2DLayer(incoming=self.cnn_qrs_net, num_filters=qrs_n_kerns[2],
+                                                      filter_size=(1, 3), pad='same',
+                                                      W=lasagne.init.GlorotUniform(),
+                                                      nonlinearity=lasagne.nonlinearities.rectify)
+        self.cnn_qrs_net = lasagne.layers.MaxPool2DLayer(self.cnn_qrs_net, pool_size=(1, 2))
 
-        self.network = lasagne.layers.Conv2DLayer(incoming=self.network, num_filters=n_kerns[3],
-                                                  filter_size=(1, 3), pad='same',
-                                                  nonlinearity=lasagne.nonlinearities.rectify)
+        self.cnn_qrs_net = lasagne.layers.Conv2DLayer(incoming=self.cnn_qrs_net, num_filters=qrs_n_kerns[3],
+                                                      filter_size=(1, 3), pad='same',
+                                                      W=lasagne.init.GlorotUniform(),
+                                                      nonlinearity=lasagne.nonlinearities.rectify)
 
-        self.network = lasagne.layers.Conv2DLayer(incoming=self.network, num_filters=n_kerns[4],
-                                                  filter_size=(1, 3), pad='same',
-                                                  nonlinearity=lasagne.nonlinearities.rectify)
+        self.cnn_qrs_net = lasagne.layers.Conv2DLayer(incoming=self.cnn_qrs_net, num_filters=qrs_n_kerns[4],
+                                                      filter_size=(1, 3), pad='same',
+                                                      W=lasagne.init.GlorotUniform(),
+                                                      nonlinearity=lasagne.nonlinearities.rectify)
 
-        self.network = lasagne.layers.DenseLayer(lasagne.layers.dropout(self.network, p=.5),
+        ######################################################################################
+
+        self.cnn_rr_net = lasagne.layers.InputLayer(shape=(None, 1, 1, self.input_rr_length),
+                                                    input_var=self.layer0_input_rr)
+
+        self.cnn_rr_net = lasagne.layers.Conv2DLayer(incoming=self.cnn_rr_net, num_filters=rr_n_kerns[0],
+                                                     filter_size=(1, 5), pad='same',
+                                                     W=lasagne.init.GlorotUniform(),
+                                                     nonlinearity=lasagne.nonlinearities.rectify)
+
+        self.cnn_rr_net = lasagne.layers.Conv2DLayer(incoming=self.cnn_rr_net, num_filters=rr_n_kerns[1],
+                                                     filter_size=(1, 5), pad='same',
+                                                     W=lasagne.init.GlorotUniform(),
+                                                     nonlinearity=lasagne.nonlinearities.rectify)
+        self.cnn_rr_net = lasagne.layers.MaxPool2DLayer(self.cnn_rr_net, pool_size=(1, 2))
+
+        self.cnn_rr_net = lasagne.layers.Conv2DLayer(incoming=self.cnn_rr_net, num_filters=rr_n_kerns[2],
+                                                     filter_size=(1, 3), pad='same',
+                                                     W=lasagne.init.GlorotUniform(),
+                                                     nonlinearity=lasagne.nonlinearities.rectify)
+
+        self.cnn_rr_net = lasagne.layers.Conv2DLayer(incoming=self.cnn_rr_net, num_filters=rr_n_kerns[3],
+                                                     filter_size=(1, 3), pad='same',
+                                                     W=lasagne.init.GlorotUniform(),
+                                                     nonlinearity=lasagne.nonlinearities.rectify)
+
+        qrs_rr_layer = ConcatLayer([self.cnn_qrs_net, self.cnn_rr_net], axis=-1)
+
+        self.mlp_net = lasagne.layers.DenseLayer(lasagne.layers.dropout(qrs_rr_layer, p=.5),
                                                  num_units=128, nonlinearity=lasagne.nonlinearities.rectify)
-        self.network = lasagne.layers.DenseLayer(lasagne.layers.dropout(self.network, p=.5),
+        self.mlp_net = lasagne.layers.DenseLayer(lasagne.layers.dropout(self.mlp_net, p=.5),
                                                  num_units=128, nonlinearity=lasagne.nonlinearities.rectify)
 
-        self.network = lasagne.layers.DenseLayer(self.network, num_units=1,
-                                                 nonlinearity=lasagne.nonlinearities.identity)
-
-        # Create a loss expression for training, i.e., a scalar objective we want
-        # to minimize (for our multi-class problem, it is the cross-entropy loss):
+        self.mlp_net = lasagne.layers.DenseLayer(self.mlp_net, num_units=3,
+                                                 nonlinearity=lasagne.nonlinearities.softmax)
 
     def __getstate__(self):
-        return lasagne.layers.get_all_param_values(self.network)
+        return lasagne.layers.get_all_param_values(self.mlp_net)
 
     def __setstate__(self, weights):
-        lasagne.layers.set_all_param_values(self.network, weights)
+        lasagne.layers.set_all_param_values(self.mlp_net, weights)
