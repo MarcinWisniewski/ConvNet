@@ -13,10 +13,10 @@ from theano.compile.nanguardmode import NanGuardMode
 import matplotlib.pyplot as plt
 
 
-def evaluate_ecg_net(learning_rate=0.01, momentum=0.9, n_epochs=40,
+def evaluate_ecg_net(learning_rate=0.0001, momentum=0.9, n_epochs=60,
                      qrs_n_kerns=(50, 65, 30, 32, 16),
                      rr_n_kerns=(45, 64, 50, 16),
-                     batch_size=1024, use_model=False):
+                     batch_size=1024, use_model=True):
     """ qrs detector on mit and incart data (fs=360Hz)
 
     :type learning_rate: float
@@ -45,9 +45,9 @@ def evaluate_ecg_net(learning_rate=0.01, momentum=0.9, n_epochs=40,
 
     rng = numpy.random.RandomState(23455)
     db_path = '/home/marcin/data/'
-    dl = DataLoader(db_path, split_factor=90,
+    dl = DataLoader(db_path, split_factor=80,
                     window=256, step=128,
-                    start=0, stop=1500)
+                    start=0, stop=1700)
 
     data_sets = dl.load_data()
     train_set_x_qrs, train_set_x_rr, train_set_y = data_sets[0]

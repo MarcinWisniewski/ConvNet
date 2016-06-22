@@ -16,10 +16,12 @@ from Readers.ecg_provider import DataProvider
 from WFDBTools.wfdb_wrann import wrann
 import cProfile
 
-N_KERNS = (64, 64, 32, 32, 32)
+qrs_n_kerns=(50, 65, 30, 32, 16)
+rr_n_kerns=(45, 64, 50, 16)
+
 # dict from class to wfdb code
 annotation_dict = {0: 0, 1: 1, 2: 5, 3: 9}
-db_path = '/home/marcin/data/incartdb'
+db_path = '/home/marcin/data/mitdb'
 
 files = os.listdir(db_path)
 files = [record.split('.')[0] for record in files if record.split('.')[-1] == 'dat']
@@ -27,12 +29,13 @@ SHOW_FRAME = False
 
 
 def recognize_signal():
+    base_dir = os.getcwd()
     x_qrs = T.tensor4('x_qrs', dtype=theano.config.floatX)    # the data is presented as qrs normalized to [0-1]
     x_rr = T.tensor4('x_rr', dtype=theano.config.floatX)    # the data is presented as qrs normalized to [0-1]
     batch_size = 128
     rng = np.random.RandomState(23455)
-    f = open('qrs_model_64filters.bin', 'rb')
-    cn_net = CNN(x_qrs, x_rr, N_KERNS, batch_size)
+    f = open('qrs_model.bin', 'rb')
+    cn_net = CNN(x_qrs, x_rr, qrs_n_kerns, rr_n_kerns, batch_size)
     cn_net.__setstate__(cPickle.load(f))
     f.close()
     test_prediction = lasagne.layers.get_output(cn_net.mlp_net, deterministic=True)
@@ -62,9 +65,10 @@ def recognize_signal():
         wrann(annot_list, file_path + '.tan')
         print timeit.default_timer() - total_time
 
+        os.chdir(db_path)
         call(['bxb', '-r', record, '-a', 'atr', 'tan', '-f', '0', '-L', 'result.bxb', '-'])
         call(['rxr', '-r', record, '-a', 'atr', 'tan', '-f', '0', '-L', 'result.rxr', 's_result.rxr'])
-
+        os.chdir(base_dir)
 
 
 
