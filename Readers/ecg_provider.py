@@ -28,9 +28,9 @@ INDEX_OF_BEAT_ANNOTS = range(1, 13) + [25, 34, 35, 38]
 
 class DataProvider(object):
     def __init__(self, data_base_path, split_factor, window=1024, step=128, start=0, stop=-1,
-                 channels_to_analyse=None, number_of_channel_to_analyse=None):
+                 channels_to_analyse=None, number_of_channel_to_analyse=None, seed=2222222):
         assert isinstance(data_base_path, str), 'wrong path'
-        np.random.seed(2222222)
+        np.random.seed(seed)
         self.data_base_path = data_base_path
         self.window = window
         self.step = step
@@ -58,7 +58,7 @@ class DataProvider(object):
                self.rr_feature_matrix[self.validation_start_index:], \
                self.class_matrix[self.validation_start_index:]
 
-    def prepare_signal(self, record):
+    def prepare_signal(self, record, channel, multiply_cls=True):
         record_path = os.path.join(self.data_base_path, record)
         timer_start = time.time()
         self._read_signal(record_path)
@@ -66,7 +66,9 @@ class DataProvider(object):
         if self.signal_info['samp_freq'] == 257:
             self._resample_data()
 
-        self._organize_data()
+        self._organize_data(channel)
+        if multiply_cls:
+            self._multiplicate_classes(5, 40)
         timer_stop = time.time()
         self.testing_start_index = int(len(self.qrs_feature_matrix) * (float(self.testing_split_factor) / 100))
         self.validation_start_index = int(len(self.qrs_feature_matrix) *
@@ -93,21 +95,19 @@ class DataProvider(object):
         self.signal_info = self.signal[1]
         self.signal = np.transpose(self.signal[0])[2:]
 
-    def _organize_data(self):
+    def _organize_data(self, channel):
         self.class_matrix = []
         self.qrs_feature_matrix = []
         self.rr_feature_matrix = []
         rrs = map(lambda annot: int(annot[0]), self.r_peaks)
-        rrs = np.diff(np.insert(rrs, 0, 0))/self.signal_info['samp_freq']
+        rrs = np.diff(np.insert(rrs, 0, 0))
 
-        #channels, signal_length = self.signal.shape
-        #max_channels_in_input_vector = min(channels, 3)
         for r_peak, morph in self.r_peaks:
             input_vector = np.zeros((1, self.window), dtype=theano.config.floatX)
             if r_peak-self.window/2 < 0:
-                normalized_signal = self._normalyse(self.signal[0][0:r_peak+(self.window/2)])
+                normalized_signal = self._normalyse(self.signal[channel][0:r_peak+(self.window/2)])
             else:
-                normalized_signal = self._normalyse(self.signal[0][r_peak-(self.window/2):r_peak+(self.window/2)])
+                normalized_signal = self._normalyse(self.signal[channel][r_peak-(self.window/2):r_peak+(self.window/2)])
 
             input_vector[0][0:len(normalized_signal)] = normalized_signal
             self.qrs_feature_matrix.append(input_vector)
@@ -128,22 +128,45 @@ class DataProvider(object):
                 R_margin -= 1
             else:
                 rr_chunk[0] = rrs[i-16: i+16]
-            #self.qrs_feature_matrix[i][1][self.window/2-16:self.window/2+16] = rr_chunk
             rr_chunk = np.asarray(rr_chunk, dtype=theano.config.floatX)
             self.rr_feature_matrix.append(self._normalyse_rr(rr_chunk))
+
+    def _multiplicate_classes(self, v_multiplier, s_multiplier):
+        for i in xrange(len(self.class_matrix)):
+            if self.class_matrix[i] == 1:
+                for multiplier in xrange(v_multiplier):
+                    self.class_matrix.append(self.class_matrix[i])
+                    self.qrs_feature_matrix.append(self.qrs_feature_matrix[i] *
+                                                   np.random.uniform(low=0.6,
+                                                                     high=1.2,
+                                                                     size=1))
+
+                    self.rr_feature_matrix.append(self.rr_feature_matrix[i] *
+                                                  np.random.uniform(low=0.6,
+                                                                    high=1.2,
+                                                                    size=1))
+            elif self.class_matrix[i] == 2:
+                for multiplier in xrange(s_multiplier):
+                    self.class_matrix.append(self.class_matrix[i])
+                    self.qrs_feature_matrix.append(self.qrs_feature_matrix[i] *
+                                                   np.random.uniform(low=0.6,
+                                                                     high=1.2,
+                                                                     size=1))
+
+                    self.rr_feature_matrix.append(self.rr_feature_matrix[i] *
+                                                  np.random.uniform(low=0.8,
+                                                                    high=1.2,
+                                                                    size=1))
 
     @staticmethod
     def _normalyse(frame):
         frame_copy = np.copy(frame)
         frame_copy -= frame_copy.min()
-        frame_copy /= frame_copy.max()
         return frame_copy
 
-
-    @staticmethod
-    def _normalyse_rr(frame):
+    def _normalyse_rr(self, frame):
         frame_copy = np.copy(frame)
-        frame_copy /= 1000
+        frame_copy /= float(self.signal_info['samp_freq'])
         return frame_copy
 
 if __name__ == '__main__':

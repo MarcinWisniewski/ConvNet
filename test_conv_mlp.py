@@ -21,7 +21,7 @@ rr_n_kerns=(45, 64, 50, 16)
 
 # dict from class to wfdb code
 annotation_dict = {0: 0, 1: 1, 2: 5, 3: 9}
-db_path = '/home/marcin/data/mitdb'
+db_path = '/home/marcin/data/incartdb'
 
 files = os.listdir(db_path)
 files = [record.split('.')[0] for record in files if record.split('.')[-1] == 'dat']
@@ -33,19 +33,19 @@ def recognize_signal():
     x_qrs = T.tensor4('x_qrs', dtype=theano.config.floatX)    # the data is presented as qrs normalized to [0-1]
     x_rr = T.tensor4('x_rr', dtype=theano.config.floatX)    # the data is presented as qrs normalized to [0-1]
     batch_size = 128
-    rng = np.random.RandomState(23455)
+    seed = 23455
     f = open('qrs_model.bin', 'rb')
     cn_net = CNN(x_qrs, x_rr, qrs_n_kerns, rr_n_kerns, batch_size)
     cn_net.__setstate__(cPickle.load(f))
     f.close()
     test_prediction = lasagne.layers.get_output(cn_net.mlp_net, deterministic=True)
     dp = DataProvider(db_path, split_factor=100, window=256,
-                      start=0, stop=-1)
+                      start=0, stop=-1, seed=seed)
     get_r_peaks = theano.function([x_qrs, x_rr], test_prediction)
     for record in files:
         print '...analysing record', record
         total_time = timeit.default_timer()
-        dp.prepare_signal(record)
+        dp.prepare_signal(record, multiply_cls=False)
         signal = dp.signal
         qrs_feature_matrix = dp.qrs_feature_matrix
         rr_feature_matrix = dp.rr_feature_matrix
@@ -59,7 +59,6 @@ def recognize_signal():
         morph = map(lambda org_morph: annotation_dict[org_morph+1], morph)
         annot_list = zip(r_peaks, morph)
 
-        #rr = np.diff(map(lambda (k, v): k,  annot_list))
         print 'saving annot file'
         file_path = os.path.join(db_path, record)
         wrann(annot_list, file_path + '.tan')
@@ -69,8 +68,6 @@ def recognize_signal():
         call(['bxb', '-r', record, '-a', 'atr', 'tan', '-f', '0', '-L', 'result.bxb', '-'])
         call(['rxr', '-r', record, '-a', 'atr', 'tan', '-f', '0', '-L', 'result.rxr', 's_result.rxr'])
         os.chdir(base_dir)
-
-
 
 
 if __name__ == '__main__':

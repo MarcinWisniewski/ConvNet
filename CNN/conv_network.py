@@ -71,9 +71,9 @@ class CNN(object):
         qrs_rr_layer = ConcatLayer([self.cnn_qrs_net, self.cnn_rr_net], axis=-1)
 
         self.mlp_net = lasagne.layers.DenseLayer(lasagne.layers.dropout(qrs_rr_layer, p=.5),
-                                                 num_units=128, nonlinearity=lasagne.nonlinearities.rectify)
+                                                 num_units=256, nonlinearity=lasagne.nonlinearities.rectify)
         self.mlp_net = lasagne.layers.DenseLayer(lasagne.layers.dropout(self.mlp_net, p=.5),
-                                                 num_units=128, nonlinearity=lasagne.nonlinearities.rectify)
+                                                 num_units=256, nonlinearity=lasagne.nonlinearities.rectify)
 
         self.mlp_net = lasagne.layers.DenseLayer(self.mlp_net, num_units=3,
                                                  nonlinearity=lasagne.nonlinearities.softmax)

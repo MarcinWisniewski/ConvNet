@@ -101,6 +101,10 @@ class DataLoader(object):
         #############
         print '... loading data from datasets'
         for data_base in self.data_bases:
+            if data_base == 'mitdb':
+                channel = 0
+            else:
+                channel = 1
             data_base_path = os.path.join(self.db_path, data_base)
             records = [record for record in os.listdir(data_base_path) if record.endswith('.dat')]
             dp = DataProvider(data_base_path, split_factor=self.split_factor,
@@ -110,7 +114,7 @@ class DataLoader(object):
                 if record.endswith('.dat'):
                     print 'loading file: ', record
                     record = record.split('.')[0]
-                    dp.prepare_signal(record)
+                    dp.prepare_signal(record, channel)
                     train_small_set = dp.get_training_set()
                     print 'train small set: ', len(train_small_set[0])
 

@@ -13,7 +13,7 @@ from theano.compile.nanguardmode import NanGuardMode
 import matplotlib.pyplot as plt
 
 
-def evaluate_ecg_net(learning_rate=0.0001, momentum=0.9, n_epochs=60,
+def evaluate_ecg_net(learning_rate=0.005, momentum=0.9, n_epochs=60,
                      qrs_n_kerns=(50, 65, 30, 32, 16),
                      rr_n_kerns=(45, 64, 50, 16),
                      batch_size=1024, use_model=True):
