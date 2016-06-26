@@ -2,17 +2,20 @@ __author__ = 'MW'
 
 import os
 import theano
-import theano.tensor as T
 import numpy as np
+from sklearn.cross_validation import train_test_split
 from ecg_provider import DataProvider
-import matplotlib.pyplot as plt
 import cPickle
+try:
+    import matplotlib.pyplot as plt
+except ImportError:
+    pass
 
 DATA_BASES = ['mitdb', 'incartdb']
 
 
 class DataLoader(object):
-    def __init__(self, db_path, data_bases=None, split_factor=85,
+    def __init__(self, db_path, data_bases=None, split_factor=0.2,
                   window=1024, step=1024, start=0, stop=600):
 
         ''' Loads the dataset
@@ -29,7 +32,7 @@ class DataLoader(object):
         :type read_data: bool
         :param read_data: if true then read data from cPickle file
 
-        :type split_factor: int
+        :type split_factor: float
         :param split_factor: percentage of split: train data / test and validadion data
 
         :type window: int
@@ -82,7 +85,6 @@ class DataLoader(object):
         shared_x_rr = theano.shared(data_x_rr,
                                     borrow=borrow)
 
-        #data_y = np.expand_dims(data_y, axis=1)
         shared_y = theano.shared(np.asarray(data_y,
                                             dtype=np.int32),
                                  borrow=borrow)
@@ -102,35 +104,54 @@ class DataLoader(object):
         print '... loading data from datasets'
         for data_base in self.data_bases:
             if data_base == 'mitdb':
-                channel = 0
+                analysed_channels = [0, 1]
             else:
-                channel = 1
+                analysed_channels = [1, 2, 3, 4, 6, 7]
             data_base_path = os.path.join(self.db_path, data_base)
-            records = [record for record in os.listdir(data_base_path) if record.endswith('.dat')]
+            records = sorted([record for record in os.listdir(data_base_path) if record.endswith('.dat')])
             dp = DataProvider(data_base_path, split_factor=self.split_factor,
                               window=self.window, step=self.step, start=self.start, stop=self.stop,
                               number_of_channel_to_analyse=None, channels_to_analyse=None)
             for record in records:
                 if record.endswith('.dat'):
-                    print 'loading file: ', record
-                    record = record.split('.')[0]
-                    dp.prepare_signal(record, channel)
-                    train_small_set = dp.get_training_set()
-                    print 'train small set: ', len(train_small_set[0])
+                    for channel in analysed_channels:
+                        record = record.split('.')[0]
+                        print 'loading file: %s, channel: %d' % (record, channel)
+                        dp.prepare_signal(record, channel)
+                        feats, clss = dp.get_data()
+                        train_features, \
+                        test_valid_features, \
+                        train_classes, \
+                        test_valid_classes = train_test_split(feats,
+                                                              clss,
+                                                              train_size=self.split_factor,
+                                                              random_state=1234)
 
-                    self.train_set[0] += train_small_set[0]
-                    self.train_set[1] += train_small_set[1]
-                    self.train_set[2] += train_small_set[2]
+                        test_features, \
+                        valid_features, \
+                        test_classes, \
+                        valid_classes = train_test_split(test_valid_features,
+                                                         test_valid_classes,
+                                                         test_size=0.5,
+                                                         random_state=1234)
+                        #train_small_set = dp.get_training_set()
+                        #print 'train small set: ', len(train_small_set[0])
+                        train_features = zip(*train_features)
+                        self.train_set[0] += train_features[0]
+                        self.train_set[1] += train_features[1]
+                        self.train_set[2] += train_classes
 
-                    valid_small_set = dp.get_validate_set()
-                    self.valid_set[0] += valid_small_set[0]
-                    self.valid_set[1] += valid_small_set[1]
-                    self.valid_set[2] += valid_small_set[2]
+                        valid_features = zip(*valid_features)
+                        #valid_small_set = dp.get_validate_set()
+                        self.valid_set[0] += valid_features[0]
+                        self.valid_set[1] += valid_features[1]
+                        self.valid_set[2] += valid_classes
 
-                    test_small_set = dp.get_testing_set()
-                    self.test_set[0] += test_small_set[0]
-                    self.test_set[1] += test_small_set[1]
-                    self.test_set[2] += test_small_set[2]
+                        test_features = zip(*test_features)
+                        #test_small_set = dp.get_testing_set()
+                        self.test_set[0] += test_features[0]
+                        self.test_set[1] += test_features[1]
+                        self.test_set[2] += test_classes
 
         self._reshuffle_data()
         test_set_x_qrs, test_set_x_rr, test_set_y = self.shared_dataset(self.test_set)

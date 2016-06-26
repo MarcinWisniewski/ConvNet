@@ -6,8 +6,10 @@ import time
 import theano
 from WFDBTools.wfdb import rdann, rdsamp
 from scipy.signal import resample
-import matplotlib.pyplot as plt
-
+try:
+    import matplotlib.pyplot as plt
+except ImportError:
+    pass
 
 #1 : 'NORMAL',	# normal beat */
 #4 : 'ABERR',	# aberrated atrial premature beat */
@@ -57,6 +59,9 @@ class DataProvider(object):
         return self.qrs_feature_matrix[self.validation_start_index:], \
                self.rr_feature_matrix[self.validation_start_index:], \
                self.class_matrix[self.validation_start_index:]
+
+    def get_data(self):
+        return zip(self.qrs_feature_matrix, self.rr_feature_matrix), self.class_matrix
 
     def prepare_signal(self, record, channel, multiply_cls=True):
         record_path = os.path.join(self.data_base_path, record)
@@ -135,28 +140,24 @@ class DataProvider(object):
         for i in xrange(len(self.class_matrix)):
             if self.class_matrix[i] == 1:
                 for multiplier in xrange(v_multiplier):
-                    self.class_matrix.append(self.class_matrix[i])
-                    self.qrs_feature_matrix.append(self.qrs_feature_matrix[i] *
-                                                   np.random.uniform(low=0.6,
-                                                                     high=1.2,
-                                                                     size=1))
-
-                    self.rr_feature_matrix.append(self.rr_feature_matrix[i] *
-                                                  np.random.uniform(low=0.6,
-                                                                    high=1.2,
-                                                                    size=1))
+                    self.add_multiplied_elements(i)
             elif self.class_matrix[i] == 2:
                 for multiplier in xrange(s_multiplier):
-                    self.class_matrix.append(self.class_matrix[i])
-                    self.qrs_feature_matrix.append(self.qrs_feature_matrix[i] *
-                                                   np.random.uniform(low=0.6,
-                                                                     high=1.2,
-                                                                     size=1))
+                    self.add_multiplied_elements(i)
 
-                    self.rr_feature_matrix.append(self.rr_feature_matrix[i] *
-                                                  np.random.uniform(low=0.8,
-                                                                    high=1.2,
-                                                                    size=1))
+    def add_multiplied_elements(self, i):
+        self.class_matrix.append(self.class_matrix[i])
+        self.qrs_feature_matrix.append(self.qrs_feature_matrix[i] *
+                                       np.random.uniform(low=0.6,
+                                                         high=1.2,
+                                                         size=1))
+        self.rr_feature_matrix.append(self.rr_feature_matrix[i] *
+                                      np.random.uniform(low=0.6,
+                                                        high=1.2,
+                                                        size=1) +
+                                      np.random.uniform(low=-0.05,
+                                                        high=0.05,
+                                                        size=len(self.rr_feature_matrix[i])))
 
     @staticmethod
     def _normalyse(frame):

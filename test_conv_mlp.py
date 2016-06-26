@@ -9,26 +9,32 @@ import theano
 import lasagne
 import os
 from subprocess import call
-import matplotlib.pyplot as plt
-
 from CNN.conv_network import CNN
 from Readers.ecg_provider import DataProvider
 from WFDBTools.wfdb_wrann import wrann
 import cProfile
+try:
+    import matplotlib.pyplot as plt
+except ImportError:
+    pass
 
 qrs_n_kerns=(50, 65, 30, 32, 16)
-rr_n_kerns=(45, 64, 50, 16)
+rr_n_kerns=(45, 64, 50, 32, 16)
 
 # dict from class to wfdb code
 annotation_dict = {0: 0, 1: 1, 2: 5, 3: 9}
 db_path = '/home/marcin/data/incartdb'
 
 files = os.listdir(db_path)
-files = [record.split('.')[0] for record in files if record.split('.')[-1] == 'dat']
+files = sorted([record.split('.')[0] for record in files if record.split('.')[-1] == 'dat'])
 SHOW_FRAME = False
 
 
 def recognize_signal():
+    if 'mitdb' in db_path:
+        channel = 0
+    else:
+        channel = 1
     base_dir = os.getcwd()
     x_qrs = T.tensor4('x_qrs', dtype=theano.config.floatX)    # the data is presented as qrs normalized to [0-1]
     x_rr = T.tensor4('x_rr', dtype=theano.config.floatX)    # the data is presented as qrs normalized to [0-1]
@@ -45,7 +51,7 @@ def recognize_signal():
     for record in files:
         print '...analysing record', record
         total_time = timeit.default_timer()
-        dp.prepare_signal(record, multiply_cls=False)
+        dp.prepare_signal(record, channel=channel, multiply_cls=False)
         signal = dp.signal
         qrs_feature_matrix = dp.qrs_feature_matrix
         rr_feature_matrix = dp.rr_feature_matrix

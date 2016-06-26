@@ -9,13 +9,14 @@ import pickle as cPickle
 from Readers.loading_processor import DataLoader
 from CNN.conv_network import CNN
 from theano.compile.nanguardmode import NanGuardMode
+try:
+    import matplotlib.pyplot as plt
+except ImportError:
+    pass
 
-import matplotlib.pyplot as plt
-
-
-def evaluate_ecg_net(learning_rate=0.005, momentum=0.9, n_epochs=60,
+def evaluate_ecg_net(learning_rate=0.0001, momentum=0.95, n_epochs=60,
                      qrs_n_kerns=(50, 65, 30, 32, 16),
-                     rr_n_kerns=(45, 64, 50, 16),
+                     rr_n_kerns=(45, 64, 50, 32, 16),
                      batch_size=1024, use_model=True):
     """ qrs detector on mit and incart data (fs=360Hz)
 
@@ -45,9 +46,9 @@ def evaluate_ecg_net(learning_rate=0.005, momentum=0.9, n_epochs=60,
 
     rng = numpy.random.RandomState(23455)
     db_path = '/home/marcin/data/'
-    dl = DataLoader(db_path, split_factor=80,
+    dl = DataLoader(db_path, split_factor=0.80,
                     window=256, step=128,
-                    start=0, stop=1700)
+                    start=0, stop=1000)
 
     data_sets = dl.load_data()
     train_set_x_qrs, train_set_x_rr, train_set_y = data_sets[0]
