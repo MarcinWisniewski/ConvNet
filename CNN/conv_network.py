@@ -78,7 +78,7 @@ class CNN(object):
         self.mlp_net = lasagne.layers.DenseLayer(lasagne.layers.dropout(qrs_rr_layer, p=.5),
                                                  num_units=512, nonlinearity=lasagne.nonlinearities.rectify)
         self.mlp_net = lasagne.layers.DenseLayer(lasagne.layers.dropout(self.mlp_net, p=.5),
-                                                 num_units=512, nonlinearity=lasagne.nonlinearities.rectify)
+                                                 num_units=256, nonlinearity=lasagne.nonlinearities.rectify)
 
         self.mlp_net = lasagne.layers.DenseLayer(self.mlp_net, num_units=3,
                                                  nonlinearity=lasagne.nonlinearities.softmax)

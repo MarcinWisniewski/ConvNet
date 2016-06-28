@@ -29,13 +29,12 @@ INDEX_OF_BEAT_ANNOTS = range(1, 13) + [25, 34, 35, 38]
 
 
 class DataProvider(object):
-    def __init__(self, data_base_path, split_factor, window=1024, step=128, start=0, stop=-1,
+    def __init__(self, data_base_path, split_factor, window=1024, start=0, stop=-1,
                  channels_to_analyse=None, number_of_channel_to_analyse=None, seed=2222222):
         assert isinstance(data_base_path, str), 'wrong path'
         np.random.seed(seed)
         self.data_base_path = data_base_path
         self.window = window
-        self.step = step
         self.start = start
         self.stop = stop
         self.channels_to_analyse = channels_to_analyse
@@ -73,7 +72,7 @@ class DataProvider(object):
 
         self._organize_data(channel)
         if multiply_cls:
-            self._multiplicate_classes(5, 40)
+            self._multiplicate_classes(3, 20)
         timer_stop = time.time()
         self.testing_start_index = int(len(self.qrs_feature_matrix) * (float(self.testing_split_factor) / 100))
         self.validation_start_index = int(len(self.qrs_feature_matrix) *
@@ -171,5 +170,5 @@ class DataProvider(object):
         return frame_copy
 
 if __name__ == '__main__':
-    ecg = DataProvider('/home/marcin/data/', 140, 1024)
-    ecg.prepare_signal()
+    ecg = DataProvider('/home/marcin/data/incartdb/broken', 100, 1024)
+    ecg.prepare_signal('I74', 1, False)

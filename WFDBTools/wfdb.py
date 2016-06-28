@@ -86,6 +86,16 @@ import numpy
 __author__ = 'Raja Selvaraj <rajajs@gmail.com>'
 __version__ = '0.2'
 
+
+DIRTY_HACK_MAPPER = {
+    281479070351360: -11,
+    281478969688064: -17,
+    281479003242496: -15,
+    281479087128576: -10,
+    281479120683008: -8,
+    281479053574144: -12,
+    281479020019712: -14
+}
 ## Annotation codes
 CODEDICT = {
     0 : 'NOTQRS',	# not-QRS (not a getann/putann codedict) */
@@ -216,7 +226,7 @@ def rdann(record, annotator, start=0, end=-1, types=[]):
 
     annfile = ''.join((record, '.', annotator))
     with open(annfile, 'rb') as f:
-        arr = numpy.fromstring(f.read(), dtype = numpy.uint8).reshape((-1, 2))
+        arr = numpy.fromstring(f.read(), dtype=numpy.uint8).reshape((-1, 2))
 
     rows = arr.shape[0]
     annot = []
@@ -227,8 +237,12 @@ def rdann(record, annotator, start=0, end=-1, types=[]):
         anntype = arr[i, 1] >> 2
         if anntype == 59:
             annot.append(arr[i+3, 1] >> 2)
-            annot_time.append(arr[i+2, 0] + (arr[i+2, 1] << 8) +
-                              (arr[i+1, 0] << 16) + arr[i+1, 1] << 24)
+            offset = (arr[i+2, 0] + (arr[i+2, 1] << 8) + (arr[i+1, 0] << 16) + arr[i+1, 1] << 24)
+            if offset in DIRTY_HACK_MAPPER.keys():
+                annot_time.append(DIRTY_HACK_MAPPER[offset])
+            else:
+                annot_time.append(arr[i+2, 0] + (arr[i+2, 1] << 8) +
+                                  (arr[i+1, 0] << 16) + arr[i+1, 1] << 24)
             i += 3
         elif anntype in [60, 61, 62]:
             pass

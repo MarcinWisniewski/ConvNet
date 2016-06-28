@@ -23,7 +23,7 @@ rr_n_kerns=(45, 64, 50, 32, 16)
 
 # dict from class to wfdb code
 annotation_dict = {0: 0, 1: 1, 2: 5, 3: 9}
-db_path = '/home/marcin/data/incartdb'
+db_path = '/home/marcin/data/mitdb/'
 
 files = os.listdir(db_path)
 files = sorted([record.split('.')[0] for record in files if record.split('.')[-1] == 'dat'])
@@ -32,7 +32,7 @@ SHOW_FRAME = False
 
 def recognize_signal():
     if 'mitdb' in db_path:
-        channel = 0
+        channel = 1
     else:
         channel = 1
     base_dir = os.getcwd()

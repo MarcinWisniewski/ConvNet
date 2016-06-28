@@ -36,13 +36,14 @@ def _write(file_handle, delta, morf):
     sample = np.uint16(temp + delta)
     file_handle.write(sample)
 
+
 def _write_extended(file_handle, delta, morf, morph_skip):
     _write(file_handle, delta, morf)
     file_handle.write(np.uint16(morph_skip << 16))
 
+
 def _delta_count(sample_number, prev_sample_number):
     return sample_number - prev_sample_number
-
 
 
 if __name__ == '__main__':

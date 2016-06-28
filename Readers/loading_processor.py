@@ -5,6 +5,7 @@ import theano
 import numpy as np
 from sklearn.cross_validation import train_test_split
 from ecg_provider import DataProvider
+from smote.data_resampler import SMOTE
 import cPickle
 try:
     import matplotlib.pyplot as plt
@@ -16,7 +17,7 @@ DATA_BASES = ['mitdb', 'incartdb']
 
 class DataLoader(object):
     def __init__(self, db_path, data_bases=None, split_factor=0.2,
-                  window=1024, step=1024, start=0, stop=600):
+                  window=256, start=0, stop=600):
 
         ''' Loads the dataset
 
@@ -54,7 +55,6 @@ class DataLoader(object):
             self.data_bases = data_bases
         self.window = window
         self.split_factor = split_factor
-        self.step = step
         self.start = start
         self.stop = stop
 
@@ -106,11 +106,11 @@ class DataLoader(object):
             if data_base == 'mitdb':
                 analysed_channels = [0, 1]
             else:
-                analysed_channels = [1, 2, 3, 4, 6, 7]
+                analysed_channels = [1, 7]
             data_base_path = os.path.join(self.db_path, data_base)
             records = sorted([record for record in os.listdir(data_base_path) if record.endswith('.dat')])
             dp = DataProvider(data_base_path, split_factor=self.split_factor,
-                              window=self.window, step=self.step, start=self.start, stop=self.stop,
+                              window=self.window, start=self.start, stop=self.stop,
                               number_of_channel_to_analyse=None, channels_to_analyse=None)
             for record in records:
                 if record.endswith('.dat'):
@@ -153,6 +153,9 @@ class DataLoader(object):
                         self.test_set[1] += test_features[1]
                         self.test_set[2] += test_classes
 
+        #rr_anomally_class = np.asarray(self.train_set[1])[np.asarray(self.train_set[2])==2]
+        #qrs_anomally_class = np.asarray(self.train_set[0])[np.asarray(self.train_set[2])==2]
+
         self._reshuffle_data()
         test_set_x_qrs, test_set_x_rr, test_set_y = self.shared_dataset(self.test_set)
         valid_set_x_qrs, valid_set_x_rr, valid_set_y = self.shared_dataset(self.valid_set)
@@ -176,5 +179,5 @@ class DataLoader(object):
 
 
 if __name__ == '__main__':
-    dl = DataLoader('/home/marcin/data/', data_bases=['mitdb'], stop=10)
+    dl = DataLoader('/home/marcin/data/', data_bases=['mitdb'], stop=100)
     aa = dl.load_data()
