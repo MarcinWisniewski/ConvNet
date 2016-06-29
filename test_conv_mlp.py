@@ -17,13 +17,12 @@ try:
     import matplotlib.pyplot as plt
 except ImportError:
     pass
-
-qrs_n_kerns=(50, 65, 30, 32, 16)
-rr_n_kerns=(45, 64, 50, 32, 16)
+qrs_n_kerns=(50, 65, 30, 32, 8)
+rr_n_kerns=(45, 64, 50, 32, 8)
 
 # dict from class to wfdb code
 annotation_dict = {0: 0, 1: 1, 2: 5, 3: 9}
-db_path = '/home/marcin/data/mitdb/'
+db_path = '/home/marcin/data/incartdb/'
 
 files = os.listdir(db_path)
 files = sorted([record.split('.')[0] for record in files if record.split('.')[-1] == 'dat'])
@@ -32,7 +31,7 @@ SHOW_FRAME = False
 
 def recognize_signal():
     if 'mitdb' in db_path:
-        channel = 1
+        channel = 0
     else:
         channel = 1
     base_dir = os.getcwd()

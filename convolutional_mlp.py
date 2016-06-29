@@ -48,12 +48,12 @@ def evaluate_ecg_net(learning_rate=0.01, momentum=0.9, n_epochs=60,
     rng = numpy.random.RandomState(23455)
     db_path = '/home/marcin/data/'
     dl = DataLoader(db_path, split_factor=0.80,
-                    window=256, start=0, stop=1200)
+                    window=256, start=0, stop=100)
 
     data_sets = dl.load_data()
-    train_set_x_qrs, train_set_x_rr, train_set_y = data_sets[0]
-    valid_set_x_qrs, valid_set_x_rr, valid_set_y = data_sets[1]
-    test_set_x_qrs, test_set_x_rr, test_set_y = data_sets[2]
+    train_set_x_qrs, train_set_x_rr, dummy, train_set_y = data_sets[0]
+    valid_set_x_qrs, valid_set_x_rr, dummy, valid_set_y = data_sets[1]
+    test_set_x_qrs, test_set_x_rr, dummy, test_set_y = data_sets[2]
 
     print 'number of training examples: ', train_set_x_qrs.get_value(borrow=True).shape[0]
     print 'number of testing examples: ', test_set_x_qrs.get_value(borrow=True).shape[0]

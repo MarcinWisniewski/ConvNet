@@ -58,9 +58,9 @@ class DataLoader(object):
         self.start = start
         self.stop = stop
 
-        self.train_set = [[], [], []]
-        self.valid_set = [[], [], []]
-        self.test_set = [[], [], []]
+        self.train_set = [[], [], [], []]
+        self.valid_set = [[], [], [], []]
+        self.test_set = [[], [], [], []]
 
     def shared_dataset(self, data_xy, borrow=True):
 
@@ -72,7 +72,7 @@ class DataLoader(object):
         is needed (the default behaviour if the data is not in a shared
         variable) would lead to a large decrease in performance.
         """
-        data_x_qrs, data_x_rr, data_y = data_xy
+        data_x_qrs, data_x_rr, data_x_p2p, data_y = data_xy
         data_x_qrs = np.asarray(data_x_qrs.tolist(), dtype=theano.config.floatX)
 
         data_x_qrs = np.expand_dims(data_x_qrs, axis=1)
@@ -85,6 +85,12 @@ class DataLoader(object):
         shared_x_rr = theano.shared(data_x_rr,
                                     borrow=borrow)
 
+        data_x_p2p = np.asarray(data_x_p2p.tolist(), dtype=theano.config.floatX)
+
+        data_x_p2p = np.expand_dims(data_x_p2p, axis=1)
+        shared_x_p2p = theano.shared(data_x_p2p,
+                                    borrow=borrow)
+
         shared_y = theano.shared(np.asarray(data_y,
                                             dtype=np.int32),
                                  borrow=borrow)
@@ -95,7 +101,7 @@ class DataLoader(object):
         # floats it doesn't make sense) therefore instead of returning
         # ``shared_y`` we will have to cast it to int. This little hack
         # lets ous get around this issue
-        return shared_x_qrs, shared_x_rr, shared_y
+        return shared_x_qrs, shared_x_rr, shared_x_p2p, shared_y
 
     def load_data(self):
         #############
@@ -139,11 +145,13 @@ class DataLoader(object):
                         train_features = zip(*train_features)
                         self.train_set[0] += train_features[0]
                         self.train_set[1] += train_features[1]
+                        self.train_set[1] += train_features[2]
                         self.train_set[2] += train_classes
 
                         valid_features = zip(*valid_features)
                         #valid_small_set = dp.get_validate_set()
                         self.valid_set[0] += valid_features[0]
+                        self.valid_set[1] += valid_features[1]
                         self.valid_set[1] += valid_features[1]
                         self.valid_set[2] += valid_classes
 
@@ -151,17 +159,16 @@ class DataLoader(object):
                         #test_small_set = dp.get_testing_set()
                         self.test_set[0] += test_features[0]
                         self.test_set[1] += test_features[1]
+                        self.test_set[1] += test_features[2]
                         self.test_set[2] += test_classes
 
-        #rr_anomally_class = np.asarray(self.train_set[1])[np.asarray(self.train_set[2])==2]
-        #qrs_anomally_class = np.asarray(self.train_set[0])[np.asarray(self.train_set[2])==2]
-
         self._reshuffle_data()
-        test_set_x_qrs, test_set_x_rr, test_set_y = self.shared_dataset(self.test_set)
-        valid_set_x_qrs, valid_set_x_rr, valid_set_y = self.shared_dataset(self.valid_set)
-        train_set_x_qrs, train_set_x_rr, train_set_y = self.shared_dataset(self.train_set)
-        rval = [(train_set_x_qrs, train_set_x_rr, train_set_y), (valid_set_x_qrs, valid_set_x_rr, valid_set_y),
-                (test_set_x_qrs, test_set_x_rr, test_set_y)]
+        test_set_x_qrs, test_set_x_rr, test_set_x_p2p, test_set_y = self.shared_dataset(self.test_set)
+        valid_set_x_qrs, valid_set_x_rr, valid_set_x_p2p, valid_set_y = self.shared_dataset(self.valid_set)
+        train_set_x_qrs, train_set_x_rr, train_set_x_p2p, train_set_y = self.shared_dataset(self.train_set)
+        rval = [(train_set_x_qrs, train_set_x_rr, train_set_x_p2p, train_set_y),
+                (valid_set_x_qrs, valid_set_x_rr, valid_set_x_p2p, valid_set_y),
+                (test_set_x_qrs, test_set_x_rr, test_set_x_p2p, test_set_y)]
         return rval
 
     def _reshuffle_data(self):

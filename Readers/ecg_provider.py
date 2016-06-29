@@ -40,27 +40,13 @@ class DataProvider(object):
         self.channels_to_analyse = channels_to_analyse
         self.number_of_channel_to_analyse = number_of_channel_to_analyse
         self.qrs_feature_matrix = []
+        self.p2p_feature_matrix = []
         self.class_matrix = []
         self.testing_split_factor = split_factor
         self.validation_split_factor = self.testing_split_factor + (100 - self.testing_split_factor) / 2
 
-    def get_training_set(self):
-        return self.qrs_feature_matrix[:self.testing_start_index], \
-               self.rr_feature_matrix[:self.testing_start_index],\
-               self.class_matrix[:self.testing_start_index]
-
-    def get_testing_set(self):
-        return self.qrs_feature_matrix[self.testing_start_index:self.validation_start_index], \
-               self.rr_feature_matrix[self.testing_start_index:self.validation_start_index], \
-               self.class_matrix[self.testing_start_index:self.validation_start_index]
-
-    def get_validate_set(self):
-        return self.qrs_feature_matrix[self.validation_start_index:], \
-               self.rr_feature_matrix[self.validation_start_index:], \
-               self.class_matrix[self.validation_start_index:]
-
     def get_data(self):
-        return zip(self.qrs_feature_matrix, self.rr_feature_matrix), self.class_matrix
+        return zip(self.qrs_feature_matrix, self.rr_feature_matrix, self.p2p_feature_matrix), self.class_matrix
 
     def prepare_signal(self, record, channel, multiply_cls=True):
         record_path = os.path.join(self.data_base_path, record)
@@ -103,8 +89,11 @@ class DataProvider(object):
         self.class_matrix = []
         self.qrs_feature_matrix = []
         self.rr_feature_matrix = []
+        self.p2p_feature_matrix = []
+
         rrs = map(lambda annot: int(annot[0]), self.r_peaks)
         rrs = np.diff(np.insert(rrs, 0, 0))
+        p2p = []
 
         for r_peak, morph in self.r_peaks:
             input_vector = np.zeros((1, self.window), dtype=theano.config.floatX)
@@ -114,26 +103,37 @@ class DataProvider(object):
                 normalized_signal = self._normalyse(self.signal[channel][r_peak-(self.window/2):r_peak+(self.window/2)])
 
             input_vector[0][0:len(normalized_signal)] = normalized_signal
+            p2p.append(max(normalized_signal))
             self.qrs_feature_matrix.append(input_vector)
             if morph in annot_dict.keys():
                 self.class_matrix.append(annot_dict[morph])
             else:
                 self.class_matrix.append(0)
-
+        rr_win = 32
+        half_rr_win = 16
         L_margin = 0
-        R_margin = 16
+        R_margin = half_rr_win
         for i in xrange(len(rrs)):
-            rr_chunk = np.zeros((1, 32))
-            if i < 16:
-                rr_chunk[0][16-L_margin:] = rrs[i-L_margin: i+16]
+            rr_chunk = np.zeros((1, rr_win))
+            p2p_chunk = np.zeros((1, rr_win))
+            if i < half_rr_win:
+                rr_chunk[0][half_rr_win-L_margin:] = rrs[i-L_margin: i+half_rr_win]
+                p2p_chunk[0][half_rr_win-L_margin:] = p2p[i-L_margin: i+half_rr_win]
                 L_margin += 1
-            elif i >= len(rrs) - 16:
-                rr_chunk[0][:16+R_margin] = rrs[i-16: i+R_margin]
+            elif i >= len(rrs) - half_rr_win:
+                rr_chunk[0][:half_rr_win+R_margin] = rrs[i-half_rr_win: i+R_margin]
+                p2p_chunk[0][:half_rr_win+R_margin] = p2p[i-half_rr_win: i+R_margin]
+
                 R_margin -= 1
             else:
-                rr_chunk[0] = rrs[i-16: i+16]
+                rr_chunk[0] = rrs[i-half_rr_win: i+half_rr_win]
+                p2p_chunk[0] = p2p[i-half_rr_win: i+half_rr_win]
+
             rr_chunk = np.asarray(rr_chunk, dtype=theano.config.floatX)
+            p2p_chunk = np.asarray(p2p_chunk, dtype=theano.config.floatX)
+
             self.rr_feature_matrix.append(self._normalyse_rr(rr_chunk))
+            self.p2p_feature_matrix.append(p2p_chunk)
 
     def _multiplicate_classes(self, v_multiplier, s_multiplier):
         for i in xrange(len(self.class_matrix)):
@@ -146,10 +146,10 @@ class DataProvider(object):
 
     def add_multiplied_elements(self, i):
         self.class_matrix.append(self.class_matrix[i])
-        self.qrs_feature_matrix.append(self.qrs_feature_matrix[i] *
-                                       np.random.uniform(low=0.6,
-                                                         high=1.2,
-                                                         size=1))
+        amplitude_multiplier = np.random.uniform(low=0.6, high=1.2, size=1)
+        self.qrs_feature_matrix.append(self.qrs_feature_matrix[i] * amplitude_multiplier)
+        self.p2p_feature_matrix.append(self.p2p_feature_matrix[i] * amplitude_multiplier)
+
         self.rr_feature_matrix.append(self.rr_feature_matrix[i] *
                                       np.random.uniform(low=0.6,
                                                         high=1.2,
@@ -170,5 +170,5 @@ class DataProvider(object):
         return frame_copy
 
 if __name__ == '__main__':
-    ecg = DataProvider('/home/marcin/data/incartdb/broken', 100, 1024)
-    ecg.prepare_signal('I74', 1, False)
+    ecg = DataProvider('/home/marcin/data/mitdb/', 100, 256)
+    ecg.prepare_signal('119', 1, False)
