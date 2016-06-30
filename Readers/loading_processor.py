@@ -145,22 +145,22 @@ class DataLoader(object):
                         train_features = zip(*train_features)
                         self.train_set[0] += train_features[0]
                         self.train_set[1] += train_features[1]
-                        self.train_set[1] += train_features[2]
-                        self.train_set[2] += train_classes
+                        self.train_set[2] += train_features[2]
+                        self.train_set[3] += train_classes
 
                         valid_features = zip(*valid_features)
                         #valid_small_set = dp.get_validate_set()
                         self.valid_set[0] += valid_features[0]
                         self.valid_set[1] += valid_features[1]
-                        self.valid_set[1] += valid_features[1]
-                        self.valid_set[2] += valid_classes
+                        self.valid_set[2] += valid_features[1]
+                        self.valid_set[3] += valid_classes
 
                         test_features = zip(*test_features)
                         #test_small_set = dp.get_testing_set()
                         self.test_set[0] += test_features[0]
                         self.test_set[1] += test_features[1]
-                        self.test_set[1] += test_features[2]
-                        self.test_set[2] += test_classes
+                        self.test_set[2] += test_features[2]
+                        self.test_set[3] += test_classes
 
         self._reshuffle_data()
         test_set_x_qrs, test_set_x_rr, test_set_x_p2p, test_set_y = self.shared_dataset(self.test_set)

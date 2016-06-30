@@ -19,10 +19,11 @@ except ImportError:
     pass
 qrs_n_kerns=(50, 65, 30, 32, 8)
 rr_n_kerns=(45, 64, 50, 32, 8)
+p2p_n_kerns=(32, 8)
 
 # dict from class to wfdb code
 annotation_dict = {0: 0, 1: 1, 2: 5, 3: 9}
-db_path = '/home/marcin/data/incartdb/'
+db_path = '/home/marcinw/data/mitdb/'
 
 files = os.listdir(db_path)
 files = sorted([record.split('.')[0] for record in files if record.split('.')[-1] == 'dat'])
@@ -36,17 +37,19 @@ def recognize_signal():
         channel = 1
     base_dir = os.getcwd()
     x_qrs = T.tensor4('x_qrs', dtype=theano.config.floatX)    # the data is presented as qrs normalized to [0-1]
-    x_rr = T.tensor4('x_rr', dtype=theano.config.floatX)    # the data is presented as qrs normalized to [0-1]
+    x_rr = T.tensor4('x_rr', dtype=theano.config.floatX)    # the data is presented as rrs normalized to by fs
+    x_p2p = T.tensor4('x_rr', dtype=theano.config.floatX)    # the data is presented as p2p
+
     batch_size = 128
     seed = 23455
     f = open('qrs_model.bin', 'rb')
-    cn_net = CNN(x_qrs, x_rr, qrs_n_kerns, rr_n_kerns, batch_size)
+    cn_net = CNN(x_qrs, x_rr, x_p2p, qrs_n_kerns, rr_n_kerns, p2p_n_kerns, batch_size)
     cn_net.__setstate__(cPickle.load(f))
     f.close()
     test_prediction = lasagne.layers.get_output(cn_net.mlp_net, deterministic=True)
     dp = DataProvider(db_path, split_factor=100, window=256,
                       start=0, stop=-1, seed=seed)
-    get_r_peaks = theano.function([x_qrs, x_rr], test_prediction)
+    get_r_peaks = theano.function([x_qrs, x_rr, x_p2p], test_prediction)
     for record in files:
         print '...analysing record', record
         total_time = timeit.default_timer()
@@ -54,10 +57,12 @@ def recognize_signal():
         signal = dp.signal
         qrs_feature_matrix = dp.qrs_feature_matrix
         rr_feature_matrix = dp.rr_feature_matrix
+        p2p_feature_matrix = dp.p2p_feature_matrix
         print 'signal length', len(signal)
         qrs_feature_matrix = np.expand_dims(qrs_feature_matrix, 1)
         rr_feature_matrix = np.expand_dims(rr_feature_matrix, 1)
-        morph = get_r_peaks(qrs_feature_matrix, rr_feature_matrix)
+        p2p_feature_matrix = np.expand_dims(p2p_feature_matrix, 1)
+        morph = get_r_peaks(qrs_feature_matrix, rr_feature_matrix, p2p_feature_matrix)
         assert len(morph) == len(dp.original_r_peaks)
         morph = np.argmax(morph, axis=1)
         r_peaks = map(lambda (ind, ann): ind, dp.original_r_peaks)

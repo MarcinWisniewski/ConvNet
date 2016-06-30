@@ -18,6 +18,7 @@ except ImportError:
 def evaluate_ecg_net(learning_rate=0.01, momentum=0.9, n_epochs=60,
                      qrs_n_kerns=(50, 65, 30, 32, 8),
                      rr_n_kerns=(45, 64, 50, 32, 8),
+                     p2p_n_kerns=(32, 8),
                      batch_size=1024, use_model=False):
     """ qrs detector on mit and incart data (fs=360Hz)
 
@@ -37,6 +38,8 @@ def evaluate_ecg_net(learning_rate=0.01, momentum=0.9, n_epochs=60,
     :type rr_n_kerns: list of ints
     :param rr_n_kerns: number of kernels on each layer for rr
 
+    :type rr_n_kerns: list of ints
+    :param rr_n_kerns: number of kernels on each layer for p2p
 
     :type batch_size: int
     :param batch_size: number of examples in minibatch
@@ -46,14 +49,14 @@ def evaluate_ecg_net(learning_rate=0.01, momentum=0.9, n_epochs=60,
     """
 
     rng = numpy.random.RandomState(23455)
-    db_path = '/home/marcin/data/'
+    db_path = '/home/marcinw/data/'
     dl = DataLoader(db_path, split_factor=0.80,
-                    window=256, start=0, stop=100)
+                    window=256, start=0, stop=1500)
 
     data_sets = dl.load_data()
-    train_set_x_qrs, train_set_x_rr, dummy, train_set_y = data_sets[0]
-    valid_set_x_qrs, valid_set_x_rr, dummy, valid_set_y = data_sets[1]
-    test_set_x_qrs, test_set_x_rr, dummy, test_set_y = data_sets[2]
+    train_set_x_qrs, train_set_x_rr, train_set_x_p2p, train_set_y = data_sets[0]
+    valid_set_x_qrs, valid_set_x_rr, valid_set_x_p2p, valid_set_y = data_sets[1]
+    test_set_x_qrs, test_set_x_rr, test_set_x_p2p, test_set_y = data_sets[2]
 
     print 'number of training examples: ', train_set_x_qrs.get_value(borrow=True).shape[0]
     print 'number of testing examples: ', test_set_x_qrs.get_value(borrow=True).shape[0]
@@ -69,7 +72,8 @@ def evaluate_ecg_net(learning_rate=0.01, momentum=0.9, n_epochs=60,
     index = T.lscalar()  # index to a [mini]batch
 
     x_qrs = T.tensor4('x_qrs', dtype=theano.config.floatX)    # the data is presented as qrs normalized to [0-1]
-    x_rr = T.tensor4('x_rr', dtype=theano.config.floatX)    # the data is presented as qrs normalized to [0-1]
+    x_rr = T.tensor4('x_rr', dtype=theano.config.floatX)    # the data is presented as rr distance normalized with fs
+    x_p2p = T.tensor4('x_rr', dtype=theano.config.floatX)    # the data is presented as p2p
 
     y = T.ivector('y')   # the target is a 2D matrix with 1 normalised index of qrs
 
@@ -77,7 +81,7 @@ def evaluate_ecg_net(learning_rate=0.01, momentum=0.9, n_epochs=60,
     # BUILD ACTUAL MODEL #
     ######################
     print '... building the model'
-    cnn = CNN(x_qrs, x_rr, qrs_n_kerns, rr_n_kerns, batch_size)
+    cnn = CNN(x_qrs, x_rr, x_p2p, qrs_n_kerns, rr_n_kerns, p2p_n_kerns, batch_size)
     print 'CNN with %i parameters' % lasagne.layers.count_params(cnn.mlp_net)
 
     if use_model:
@@ -109,6 +113,7 @@ def evaluate_ecg_net(learning_rate=0.01, momentum=0.9, n_epochs=60,
         givens={
             x_qrs: test_set_x_qrs[index * batch_size: (index + 1) * batch_size],
             x_rr: test_set_x_rr[index * batch_size: (index + 1) * batch_size],
+            x_p2p: test_set_x_p2p[index * batch_size: (index + 1) * batch_size],
             y: test_set_y[index * batch_size: (index + 1) * batch_size]
         }
     )
@@ -119,6 +124,7 @@ def evaluate_ecg_net(learning_rate=0.01, momentum=0.9, n_epochs=60,
         givens={
             x_qrs: valid_set_x_qrs[index * batch_size: (index + 1) * batch_size],
             x_rr: valid_set_x_rr[index * batch_size: (index + 1) * batch_size],
+            x_p2p: valid_set_x_p2p[index * batch_size: (index + 1) * batch_size],
             y: valid_set_y[index * batch_size: (index + 1) * batch_size]
         }
     )
@@ -130,6 +136,7 @@ def evaluate_ecg_net(learning_rate=0.01, momentum=0.9, n_epochs=60,
         givens={
             x_qrs: train_set_x_qrs[index * batch_size: (index + 1) * batch_size],
             x_rr: train_set_x_rr[index * batch_size: (index + 1) * batch_size],
+            x_p2p: train_set_x_p2p[index * batch_size: (index + 1) * batch_size],
             y: train_set_y[index * batch_size: (index + 1) * batch_size]
         }
     )
@@ -157,7 +164,7 @@ def evaluate_ecg_net(learning_rate=0.01, momentum=0.9, n_epochs=60,
 
     epoch = 0
     done_looping = False
-    best_cnn = CNN(x_qrs, x_rr, qrs_n_kerns, rr_n_kerns, batch_size)
+    best_cnn = CNN(x_qrs, x_rr, x_p2p, qrs_n_kerns, rr_n_kerns, p2p_n_kerns, batch_size)
     print 'valid frequency - %i iterations' % validation_frequency
     print 'number of epochs - %i ' % n_epochs
     while (epoch < n_epochs) and (not done_looping):
