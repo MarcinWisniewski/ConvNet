@@ -12,7 +12,7 @@ try:
 except ImportError:
     pass
 
-DATA_BASES = ['mitdb', 'incartdb']
+DATA_BASES = ['svdb', 'mitdb', 'incartdb']
 
 
 class DataLoader(object):
@@ -109,10 +109,10 @@ class DataLoader(object):
         #############
         print '... loading data from datasets'
         for data_base in self.data_bases:
-            if data_base == 'mitdb':
-                analysed_channels = [0, 1]
+            if data_base == 'incartdb' :
+                analysed_channels = [1, 9]
             else:
-                analysed_channels = [1, 7]
+                analysed_channels = [0, 1]
             data_base_path = os.path.join(self.db_path, data_base)
             records = sorted([record for record in os.listdir(data_base_path) if record.endswith('.dat')])
             dp = DataProvider(data_base_path, split_factor=self.split_factor,

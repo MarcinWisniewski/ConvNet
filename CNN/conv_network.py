@@ -92,6 +92,18 @@ class CNN(object):
                                                       W=lasagne.init.GlorotUniform(),
                                                       nonlinearity=lasagne.nonlinearities.rectify)
 
+        self.cnn_p2p_net = lasagne.layers.MaxPool2DLayer(self.cnn_p2p_net, pool_size=(1, 2))
+
+        self.cnn_p2p_net = lasagne.layers.Conv2DLayer(incoming=self.cnn_p2p_net, num_filters=p2p_n_kerns[2],
+                                                      filter_size=(1, 3), pad='same',
+                                                      W=lasagne.init.GlorotUniform(),
+                                                      nonlinearity=lasagne.nonlinearities.rectify)
+
+        self.cnn_p2p_net = lasagne.layers.Conv2DLayer(incoming=self.cnn_p2p_net, num_filters=p2p_n_kerns[3],
+                                                      filter_size=(1, 3), pad='same',
+                                                      W=lasagne.init.GlorotUniform(),
+                                                      nonlinearity=lasagne.nonlinearities.rectify)
+
         qrs_rr_layer = ConcatLayer([self.cnn_qrs_net, self.cnn_rr_net, self.cnn_p2p_net], axis=-1)
 
         self.mlp_net = lasagne.layers.DenseLayer(lasagne.layers.dropout(qrs_rr_layer, p=.5),

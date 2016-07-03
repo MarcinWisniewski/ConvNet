@@ -53,21 +53,21 @@ class DataProvider(object):
         timer_start = time.time()
         self._read_signal(record_path)
         self._read_r_peaks(record_path)
-        if self.signal_info['samp_freq'] == 257:
-            self._resample_data()
+        if self.signal_info['samp_freq'] == 257 or self.signal_info['samp_freq'] == 128:
+            self._resample_data(self.signal_info['samp_freq'])
 
         self._organize_data(channel)
         if multiply_cls:
-            self._multiplicate_classes(3, 20)
+            self._multiplicate_classes(4, 10)
         timer_stop = time.time()
         self.testing_start_index = int(len(self.qrs_feature_matrix) * (float(self.testing_split_factor) / 100))
         self.validation_start_index = int(len(self.qrs_feature_matrix) *
                                           (float(self.validation_split_factor) / 100))
         print timer_stop - timer_start
 
-    def _resample_data(self):
-        self.signal = resample(self.signal, len(self.signal[0]) / 257.0 * 360, axis=1)
-        self.r_peaks = map(lambda (r_index, morph): (int(r_index / 257.0 * 360), morph), self.r_peaks)
+    def _resample_data(self, base_fs):
+        self.signal = resample(self.signal, len(self.signal[0]) / float(base_fs) * 360, axis=1)
+        self.r_peaks = map(lambda (r_index, morph): (int(r_index / float(base_fs) * 360), morph), self.r_peaks)
         self.signal_info['samp_freq'] = 360
 
     def _read_r_peaks(self, record_path):

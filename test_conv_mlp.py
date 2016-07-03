@@ -17,13 +17,13 @@ try:
     import matplotlib.pyplot as plt
 except ImportError:
     pass
-qrs_n_kerns=(50, 65, 30, 32, 8)
-rr_n_kerns=(45, 64, 50, 32, 8)
-p2p_n_kerns=(32, 8)
+qrs_n_kerns=(50, 65, 30, 32, 6)
+rr_n_kerns=(45, 64, 50, 32, 6)
+p2p_n_kerns=(20, 20, 32, 6)
 
 # dict from class to wfdb code
 annotation_dict = {0: 0, 1: 1, 2: 5, 3: 9}
-db_path = '/home/marcinw/data/mitdb/'
+db_path = os.path.expanduser('~/data/mitdb')
 
 files = os.listdir(db_path)
 files = sorted([record.split('.')[0] for record in files if record.split('.')[-1] == 'dat'])

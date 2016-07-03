@@ -491,7 +491,7 @@ def _read_data(record, start, end, info):
 
     # read into an array with 3 bytes in each row
     with open(datfile, 'rb') as f:
-        if info['samp_freq'] == 360:
+        if info['samp_freq'] == 360 or  info['samp_freq'] == 128:
             f.seek(start*24)
             arr = numpy.fromstring(f.read(3*samp_to_read),
                                    dtype=numpy.uint8).reshape((samp_to_read, 3))
@@ -504,6 +504,8 @@ def _read_data(record, start, end, info):
             data = _arr_to_data16b(arr)
 
     # adjust zerovalue and gain
+    if 0 in info['gains']:
+        info['gains'] = [200, 200]
     data[:, 2:] = (data[:, 2:] - info['zero_values']) / info['gains']
 
     # time columns

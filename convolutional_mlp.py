@@ -16,9 +16,9 @@ except ImportError:
 
 
 def evaluate_ecg_net(learning_rate=0.01, momentum=0.9, n_epochs=60,
-                     qrs_n_kerns=(50, 65, 30, 32, 8),
-                     rr_n_kerns=(45, 64, 50, 32, 8),
-                     p2p_n_kerns=(32, 8),
+                     qrs_n_kerns=(50, 65, 30, 32, 6),
+                     rr_n_kerns=(45, 64, 50, 32, 6),
+                     p2p_n_kerns=(20, 20, 32, 6),
                      batch_size=1024, use_model=False):
     """ qrs detector on mit and incart data (fs=360Hz)
 
@@ -38,8 +38,8 @@ def evaluate_ecg_net(learning_rate=0.01, momentum=0.9, n_epochs=60,
     :type rr_n_kerns: list of ints
     :param rr_n_kerns: number of kernels on each layer for rr
 
-    :type rr_n_kerns: list of ints
-    :param rr_n_kerns: number of kernels on each layer for p2p
+    :type p2p_n_kerns: list of ints
+    :param p2p_n_kerns: number of kernels on each layer for p2p
 
     :type batch_size: int
     :param batch_size: number of examples in minibatch
@@ -49,9 +49,9 @@ def evaluate_ecg_net(learning_rate=0.01, momentum=0.9, n_epochs=60,
     """
 
     rng = numpy.random.RandomState(23455)
-    db_path = '/home/marcinw/data/'
+    db_path = os.path.expanduser('~/data/')
     dl = DataLoader(db_path, split_factor=0.80,
-                    window=256, start=0, stop=1500)
+                    window=256, start=0, stop=1200)
 
     data_sets = dl.load_data()
     train_set_x_qrs, train_set_x_rr, train_set_x_p2p, train_set_y = data_sets[0]
